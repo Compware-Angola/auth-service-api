@@ -8,13 +8,13 @@ import {
 } from '@nestjs/common';
 import { HashService } from './hash.service';
 import { JwtService } from '@nestjs/jwt';
-import { IsNotEmpty, IsString } from 'class-validator';
+
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiProperty,
+
 } from '@nestjs/swagger';
 import { HashDto } from './dto/hash.dto';
 import { LoginFromDbDto } from './dto/login-from-db.dto';
