@@ -48,7 +48,7 @@ export class SendRenewDataDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Min(10, { message: 'O motivo deve ter no mínimo 10 caracteres' })
+ 
   details: string;
 
   @ApiProperty({
