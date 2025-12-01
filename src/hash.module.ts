@@ -6,6 +6,7 @@ import { jwtConstants } from './jwt.constants';
 import { HashController } from './hash.controller';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MailerModule } from '@nestjs-modules/mailer';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -40,6 +41,28 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         };
       },
     }),
+        MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get<string>('MAIL_HOST'),
+          port: config.get<number>('MAIL_PORT'),
+          secure: config.get<string>('MAIL_SECURE') === 'true',
+          auth: {
+            user: config.get<string>('MAIL_USER'),
+            pass: config.get<string>('MAIL_PASS'),
+          },
+          
+          options: {
+            connectionTimeout: 60000, 
+          }
+        },
+        defaults: {
+          from: `"Suporte Uma" <${config.get<string>('MAIL_USER')}>`,
+        },
+      }),
+    }),
+  
     AuthModule,
   ],
   controllers: [HashController],
