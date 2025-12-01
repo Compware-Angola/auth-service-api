@@ -66,14 +66,14 @@ export class AuthService {
       case AuthPlatform.GA:
         const existsGA = await this.checkEmailExistsGA(email);
         if (!existsGA) {
-          throw new NotFoundException('Email não encontrado na GA.');
+         return { email, exists: false };
         }
         return { email, exists: existsGA };
 
       case AuthPlatform.PORTAL:
         const existsPortal = await this.checkEmailExistsPortal(email);
         if (!existsPortal) {
-          throw new NotFoundException('Email não encontrado no portal.');
+          return { email, exists: false };
         }
         console.log(existsPortal);
 
