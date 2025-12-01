@@ -8,6 +8,7 @@ import {
   Matches,
   IsEnum,
   IsOptional,
+  Min,
 } from 'class-validator';
 import { AuthPlatform } from './signIn.dto';
 
@@ -47,7 +48,7 @@ export class SendRenewDataDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Length(20, 500)
+  @Min(10, { message: 'O motivo deve ter no mínimo 10 caracteres' })
   details: string;
 
   @ApiProperty({
