@@ -27,7 +27,7 @@ export class SendRenewDataDto {
     example: '202300145',
   })
   @IsString()
-  @Length(6, 12)
+
   @IsOptional()
   enrrolment?: string;
 
@@ -37,9 +37,7 @@ export class SendRenewDataDto {
   })
   @IsString()
   @IsNotEmpty()
-  @Matches(/^\+244\s[9][1-9]\d{1}\s\d{3}\s\d{3}$/, {
-    message: 'Formato: +244 923 456 789',
-  })
+ 
   phone: string;
 
   @ApiProperty({
