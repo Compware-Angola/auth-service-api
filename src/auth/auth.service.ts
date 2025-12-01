@@ -9,6 +9,7 @@ import { toLowerCaseKeys } from 'src/util/toLowerCaseKeys';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ResetPasswordDto } from './dto/reset-password';
+import { SendRenewDataDto } from './dto/send-renew-data.dto';
 
 
 
@@ -76,7 +77,7 @@ export class AuthService {
         }
         console.log(existsPortal);
 
-        return { email, exists:true };
+        return { email, exists: true };
 
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
@@ -87,7 +88,7 @@ export class AuthService {
     const { email, platform } = sendchangePasswordDto;
     switch (platform) {
       case AuthPlatform.GA:
-       
+
         break;
       case AuthPlatform.PORTAL:
         const user = await this.checkEmailExistsPortal(email);
@@ -97,11 +98,11 @@ export class AuthService {
         const payload = { sub: user.id, email: user.email };
         const resetToken = this.jwtService.sign(payload, { expiresIn: '10m' });
         const url_portal = process.env.URL_PORTAL;
-       
-        
+
+
         const link = `${url_portal}/auth/renovar-senha/${resetToken}`;
         console.log(link);
-        
+
         await this.sendEmail(email, 'Redefinição de Senha', `<p>Por favor, clique no link para redefinir sua senha. ${link}</p>`);
         return { message: 'Email de redefinição de senha enviado com sucesso para o portal.' };
       default:
@@ -111,7 +112,7 @@ export class AuthService {
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<any> {
     const { token, newPassword, platform } = resetPasswordDto;
     const payload = this.jwtService.verify(token);
-     switch (platform) {
+    switch (platform) {
       case AuthPlatform.PORTAL:
         const user = await this.checkEmailExistsPortal(payload.email);
         if (!user) {
@@ -190,14 +191,122 @@ FROM FK2_USERS u
 WHERE u.EMAIL= :email`, [email]);
     return await toLowerCaseKeys(result[0]);
   }
+  async sendRenewData(peloadData: SendRenewDataDto) {
+    const { email, enrrolment, phone, details, platform } = peloadData;
+    switch (platform) {
+      case AuthPlatform.PORTAL:
+        const subject = '[Portal UMA] Solicitação de Atualização de Dados Cadastrais';
+
+        const htmlContent = `
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <title>Solicitação de Atualização de Dados - Portal UMA</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8f9fa; margin: 0; padding: 20px; color: #333; }
+    .container { max-width: 640px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+    .header { background: linear-gradient(135deg, #f8f9fa, #f8f9fa); padding: 30px 20px; text-align: center; color: #d32f2f; }
+    .header img { height: 80px; margin-bottom: 15px; }
+    .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+    .body { padding: 30px 40px; line-height: 1.7; }
+    .highlight { background: #e3f2fd; padding: 16px; border-radius: 8px; border-left: 5px solid #e63f3fff; margin: 20px 0; }
+    .info-grid { display: grid; grid-template-columns: max-content 1fr; gap: 12px 20px; margin: 20px 0; font-size: 15px; }
+    .label { font-weight: 600; color: #bb0b0bff; }
+    .footer { background: #f5f5f5; padding: 20px; text-align: center; font-size: 13px; color: #666; border-top: 1px solid #eee; }
+    .badge { display: inline-block; padding: 6px 14px; background: #d32f2f; color: white; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Cabeçalho -->
+    <div class="header">
+      <img src="https://universidademetodista.ao/static/media/lgH3c.cdc201af.png" alt="Universidade Metodista de Angola" />
+      <h1>Portal Universitário</h1>
+    </div>
+
+    <!-- Corpo -->
+    <div class="body">
+      <h2 style="color: #bb0b0bff; margin-top: 0;">Nova Solicitação de Atualização de Dados</h2>
+      
+      <p>Um <strong>usuário do Portal Universitário</strong> submeteu uma solicitação para atualizar ou corrigir os seus dados cadastrais no sistema.</p>
+
+      <div class="highlight">
+        <strong>Esta solicitação requer análise da Secretaria Acadêmica.</strong>
+      </div>
+
+      <div class="info-grid">
+        <span class="label">E-mail informado:</span>
+        <span><strong>${email}</strong></span>
+
+        <span class="label">Matrícula:</span>
+        <span>${enrrolment ?? '<em>Não informado</em>'}</span>
+
+        <span class="label">Telefone:</span>
+        <span>${phone}</span>
+
+        <span class="label">Plataforma:</span>
+        <span><span class="badge">${platform.toUpperCase()}</span></span>
+
+        <span class="label">Data/Hora:</span>
+        <span>${new Date().toLocaleString('pt-AO', {
+          timeZone: 'Africa/Luanda',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}</span>
+      </div>
+
+      <hr style="border: 0; border-top: 1px dashed #ccc; margin: 25px 0;">
+
+      <h3 style="color: #bb0b0bff;">Detalhes fornecidos pelo usuário:</h3>
+      <blockquote style="background:#f9f9f9; padding:15px 20px; border-left:4px solid #bb0b0bff; margin:15px 0; font-style:italic;">
+        ${details.replace(/\n/g, '<br>')}
+      </blockquote>
+
+      <p><strong>Ação necessária:</strong> Verificar os dados atuais do estudante e proceder com a atualização no sistema institucional.</p>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="footer">
+      <p><strong>Universidade Metodista de Angola</strong> • Portal Universitário</p>
+      <p style="margin:5px 0; color:#888;">Este é um e-mail automático. Não responder.</p>
+      <p>© ${new Date().getFullYear()} UMA - Todos os direitos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+        const adminEmail = process.env.ADMIN_EMAIL;
+        console.log(adminEmail);
+        
+        if (!adminEmail) {
+          throw new BadRequestException('E-mail do administrador não configurado.');
+        }
+        await this.sendEmail(adminEmail, subject, htmlContent, email);
+        return { message: 'Solicitação de renovação de dados enviada com sucesso.' };
+      case AuthPlatform.GA:
+        throw new BadRequestException('Solicitação de renovação de dados ainda não suportada para GA.');
+        break;
+      default:
+        throw new BadRequestException('Plataforma inválida. Use PORTAL para solicitar renovação de dados.');
+    }
+
+
+  }
   async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
     await this.dataSource.query(`UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword
     WHERE ID = :codigo`, [hashedPassword, codigo]);
   }
-  async sendEmail(to: string, subject: string, htmlContent: string) {
+
+  async sendEmail(to: string, subject: string, htmlContent: string, from?: string) {
     await this.mailerService.sendMail({
       to: to,
+     // from: from ? undefined : process.env.MAIL_USER,
+     // cc: from ? undefined : process.env.MAIL_USER_CC,
       subject: subject,
       html: htmlContent,
     });

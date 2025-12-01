@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { SignInDto } from './dto/signIn.dto';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { ResetPasswordDto } from './dto/reset-password';
+import { SendRenewDataDto } from './dto/send-renew-data.dto';
 
 @ApiTags('AUTH')
 @Controller('auth')
@@ -44,5 +45,13 @@ async sendChangePasswordEmail(@Body() checkEmailExistsDto: CheckEmailExistsDto) 
 @ApiBody({ type: ResetPasswordDto })
 async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
   return this.authService.resetPassword(resetPasswordDto);
+}
+@Post('send-renew-data')
+@ApiOperation({ summary: 'Envia uma solicitação para renovação de dados cadastrais' })
+@ApiResponse({ status: 200, description: 'Solicitação enviada com sucesso.' })
+@ApiResponse({ status: 400, description: 'Erro ao enviar a solicitação.' })
+@ApiBody({ type: SendRenewDataDto })
+async sendRenewData(@Body() sendRenewDataDto: SendRenewDataDto) {
+  return this.authService.sendRenewData(sendRenewDataDto);
 }
 }
