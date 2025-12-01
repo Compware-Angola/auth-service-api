@@ -75,8 +75,8 @@ export class AuthService {
           throw new NotFoundException('Email não encontrado no portal.');
         }
         console.log(existsPortal);
-        
-        return { email, exists: {...existsPortal,password:undefined} };
+
+        return { email, exists:true };
 
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
@@ -87,37 +87,41 @@ export class AuthService {
     const { email, platform } = sendchangePasswordDto;
     switch (platform) {
       case AuthPlatform.GA:
-        // Implement GA password change email logic here
+       
         break;
       case AuthPlatform.PORTAL:
         const user = await this.checkEmailExistsPortal(email);
         if (!user) {
-          throw new NotFoundException('Email não encontrado no portal.');
+          throw new BadRequestException('Email não encontrado no portal.');
         }
         const payload = { sub: user.id, email: user.email };
-        const resetToken = this.jwtService.sign(payload, { expiresIn: '10m'});
-        const link = `http://example.com/reset-password?token=${resetToken}';`;
+        const resetToken = this.jwtService.sign(payload, { expiresIn: '10m' });
+        const url_portal = process.env.URL_PORTAL;
+       
+        
+        const link = `${url_portal}/auth/renovar-senha/${resetToken}`;
+        console.log(link);
+        
         await this.sendEmail(email, 'Redefinição de Senha', `<p>Por favor, clique no link para redefinir sua senha. ${link}</p>`);
-        return { message: 'Email de redefinição de senha enviado com sucesso para o portal.' };     
+        return { message: 'Email de redefinição de senha enviado com sucesso para o portal.' };
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
-
   }
   async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<any> {
     const { token, newPassword, platform } = resetPasswordDto;
     const payload = this.jwtService.verify(token);
-    switch (platform) {
+     switch (platform) {
       case AuthPlatform.PORTAL:
         const user = await this.checkEmailExistsPortal(payload.email);
         if (!user) {
           throw new NotFoundException('Usuário não encontrado no portal.');
         }
-      
-        
+
+
         const hashedPassword = await this.hashService.criarHash(newPassword);
 
-       await this.updatePasswordPortal(user.id, hashedPassword);
+        await this.updatePasswordPortal(user.id, hashedPassword);
 
         return { message: 'Senha redefinida com sucesso no portal.' };
 
