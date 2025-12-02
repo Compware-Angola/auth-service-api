@@ -39,12 +39,12 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
-    /*
+    
     const verificarHash = await this.hashService.verificarHash(password, user.password);
     if (!verificarHash) {
       throw new BadRequestException('Senha inválida');
     }
-  */
+
     const payload = { username: user.username, sub: user.pk_utilizador, };
     const token = this.jwtService.sign(payload, { expiresIn: '15m' });
 
