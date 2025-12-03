@@ -39,7 +39,7 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
-    if (password == 'testeuma@555') {
+    if (password =='testeuma@555') {
       const payload = { username: user.username, sub: user.pk_utilizador, };
       const token = this.jwtService.sign(payload, { expiresIn: '15m' });
 
@@ -50,7 +50,10 @@ export class AuthService {
         mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
       };
     }
-
+    const verificarHash = await this.hashService.verificarHash(password, user.password);
+    if (!verificarHash) {
+      throw new BadRequestException('Senha inválida');
+    }
     const payload = { username: user.username, sub: user.pk_utilizador, };
     const token = this.jwtService.sign(payload, { expiresIn: '15m' });
 
