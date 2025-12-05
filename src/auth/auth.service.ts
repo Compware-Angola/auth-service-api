@@ -194,13 +194,19 @@ WHERE u.EMAIL= :email`, [email]);
 
     return await toLowerCaseKeys(result[0]);
   }
-  async checkEmailExistsPortal(email: string): Promise<any> {
-    const result = await this.dataSource.query(`SELECT
-   *
-FROM FK2_USERS u
-WHERE u.EMAIL= :email`, [email]);
-    return await toLowerCaseKeys(result[0]);
-  }
+ async checkEmailExistsPortal(email: string): Promise<any> {
+  const result = await this.dataSource.query(
+    `
+    SELECT *
+    FROM FK2_USERS u
+    WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))
+    `,
+    [email.trim()]
+  );
+
+  return toLowerCaseKeys(result[0]);
+}
+
   async sendRenewData(peloadData: SendRenewDataDto) {
     const { email, enrrolment, phone, details, platform } = peloadData;
     switch (platform) {
