@@ -4,6 +4,7 @@ import { CreateStudetDto } from './dto/create-studet.dto';
 import { UpdateStudetDto } from './dto/update-studet.dto';
 import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { UpdateUserDto } from './dto/update-user-student-data.dto';
 
 @Controller('studets')
 export class StudetsController {
@@ -23,4 +24,17 @@ export class StudetsController {
   ) {
     return this.studetsService.resetPassword(userId, resetPasswordDto)
   }
+
+   @Put('users/:id')
+  @ApiOperation({ summary: 'Atualiza os dados do usuário' })
+  @ApiParam({ name: 'id', description: 'ID do usuário', example: 123 })
+  @ApiBody({ type: UpdateUserDto })
+  async updateUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    const userId = Number(id) 
+    return this.studetsService.updateDataUser(userId, updateUserDto)
+  }
 }
+
