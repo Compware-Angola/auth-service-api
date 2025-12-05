@@ -4,9 +4,10 @@ import { HashService } from './hash.service';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './jwt.constants';
 import { HashController } from './hash.controller';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './module/shared/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { StudetsModule } from './module/studets/studets.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -64,6 +65,8 @@ import { MailerModule } from '@nestjs-modules/mailer';
     }),
   
     AuthModule,
+  
+    StudetsModule,
   ],
   controllers: [HashController],
   providers: [HashService],

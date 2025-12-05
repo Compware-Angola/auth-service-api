@@ -85,7 +85,7 @@ export class AuthService {
         if (!existsPortal) {
           return { email, exists: false };
         }
-        console.log(existsPortal);
+  
 
         return { email, exists: true };
 
@@ -312,7 +312,7 @@ WHERE u.EMAIL= :email`, [email]);
 
 
   }
-  async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
+async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
     await this.dataSource.query(`UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword
     WHERE ID = :codigo`, [hashedPassword, codigo]);

@@ -16,12 +16,12 @@ import {
   ApiBody,
 
 } from '@nestjs/swagger';
-import { HashDto } from './dto/hash.dto';
-import { LoginFromDbDto } from './dto/login-from-db.dto';
-import { TokenResponse } from './dto/token-response';
-import { VerifyResponse } from './dto/verify-response.dto';
-import { VerifyJwtDto } from './dto/verify-jwt.dto';
-import { VerifyOldDto } from './dto/verify-old.dto';
+import { HashDto } from './module/shared/dto/hash.dto';
+import { LoginFromDbDto } from './module/shared/dto/login-from-db.dto';
+import { TokenResponse } from './module/shared/dto/token-response';
+import { VerifyResponse } from './module/shared/dto/verify-response.dto';
+import { VerifyJwtDto } from './module/shared/dto/verify-jwt.dto';
+import { VerifyOldDto } from './module/shared/dto/verify-old.dto';
 
 
 
