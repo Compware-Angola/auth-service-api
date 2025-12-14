@@ -32,13 +32,14 @@ export class AuthService {
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
+       if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
     if (AuthPlatform.GA && user.active_state !== 1) {
       throw new NotFoundException('Usuário inativo, contate o administrador do sistema.');
     }
 
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado');
-    }
+ 
     if (password =='testeuma@555') {
       const payload = { username: user.username, sub: user.pk_utilizador, };
       const token = this.jwtService.sign(payload, { expiresIn: '15m' });
