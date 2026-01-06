@@ -19,9 +19,11 @@ export class AuthService {
   async signIn(signInDto: SignInDto) {
     const { username, password, platform } = signInDto;
     let user: any;
+    let groups: any;
     switch (platform) {
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
+        groups = await this.findGroupsByUserGA(username);
 
         break;
 
@@ -48,6 +50,7 @@ export class AuthService {
         access_token: token,
         expires_in: 900,
         user: { ...user, password: undefined },
+        groups: groups,
         mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
       };
     }
@@ -62,6 +65,7 @@ export class AuthService {
       access_token: token,
       expires_in: 900,
       user: { ...user, password: undefined },
+        groups: groups,
       mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
     };
   }
@@ -169,6 +173,23 @@ WHERE u.USERNAME= :username`, [username]);
 
     return await toLowerCaseKeys(result[0]);
 
+  }
+  async findGroupsByUserGA(username: string): Promise<any[]> {
+    const result = await this.dataSource.query(`SELECT
+    g.PK_GRUPO AS codigo,
+    g.DESIGNACAO AS designation,
+    g.SIGLA AS acronym,
+    g.FK_TIPO_DE_GRUPO AS type_group ,
+    tg.DESIGNACAO AS type_group_designation  
+FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
+JOIN FK2_MCA_TB_GRUPO g ON gu.FK_GRUPO = g.PK_GRUPO
+JOIN FK2_MCA_TB_UTILIZADOR u ON gu.FK_UTILIZADOR = u.PK_UTILIZADOR
+JOIN FK2_MCA_TB_TIPO_DE_GRUPO tg ON g.FK_TIPO_DE_GRUPO = tg.PK_TIPO_DE_GRUPO
+WHERE u.USERNAME = :username
+  AND gu.ACTIVE_STATE = 1
+  AND g.ACTIVE_STATE = 1`, [username]);
+
+    return  toLowerCaseKeys(result);
   }
   async checkEmailExistsGA(email: string): Promise<any> {
     const result = await this.dataSource.query(`SELECT
