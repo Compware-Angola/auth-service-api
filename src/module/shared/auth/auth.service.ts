@@ -178,7 +178,7 @@ WHERE u.USERNAME= :username`, [username]);
     const result = await this.dataSource.query(`SELECT
     g.PK_GRUPO AS codigo,
     g.DESIGNACAO AS designation,
-    g.SIGLA AS acronym,
+    g.SIGLA AS sigla,
     g.FK_TIPO_DE_GRUPO AS type_group ,
     tg.DESIGNACAO AS type_group_designation  
 FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
