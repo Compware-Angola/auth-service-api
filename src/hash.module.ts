@@ -16,7 +16,7 @@ import { StudetsModule } from './module/studets/studets.module';
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
-      signOptions: { expiresIn: '15m' },
+      signOptions: { expiresIn: '2h' },
     }), TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
