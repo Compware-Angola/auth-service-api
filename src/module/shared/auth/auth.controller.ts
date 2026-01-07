@@ -1,10 +1,12 @@
-import { Controller, Post, Body } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Param, UseGuards, Req, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { SignInDto } from './dto/signIn.dto';
+import { AuthPlatform, SignInDto } from './dto/signIn.dto';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
+import { GetCurrentPlataformDto } from './dto/get-plataform-user';
+import { JwtAuthGuard } from '../guard/jwt-auth.guard';
 
 @ApiTags('AUTH')
 @Controller('auth')
@@ -20,7 +22,31 @@ export class AuthController {
     return this.authService.signIn(signInDto);
   }
 
+@Get('current-user')
+@UseGuards(JwtAuthGuard) // continua protegendo com JWT
+@ApiBearerAuth('JWT-auth')
+@ApiOperation({ summary: 'Obtém informações do usuário atual em uma plataforma específica' })
+@ApiQuery({
+  name: 'platform',
+  enum: AuthPlatform,
+  description: 'Plataforma para consultar os dados do usuário',
+  example: AuthPlatform.GA,
+  required: true,
+})
+@ApiResponse({ status: 200, description: 'Informações obtidas com sucesso.' })
+@ApiResponse({ status: 400, description: 'Platform inválida ou ausente.' })
+@ApiResponse({ status: 401, description: 'Não autorizado.' })
+async getCurrentUser(
+  @Query() query: GetCurrentPlataformDto, // Agora usa @Query()
+  @Req() req: any,
+) {
+  const userPayload = req.user; 
+  console.log('Payload JWT:', userPayload);
+  console.log('Platform solicitada:', query.platform);
 
+  // Passe os dois: o payload do JWT + a platform escolhida
+  return this.authService.getCurrentUser(userPayload, query);
+}
 @Post('check-email')
 @ApiOperation({ summary: 'Verifica se o e-mail existe na plataforma especificada' })
 @ApiResponse({ status: 200, description: 'E-mail verificado com sucesso.' })
@@ -54,4 +80,6 @@ async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
 async sendRenewData(@Body() sendRenewDataDto: SendRenewDataDto) {
   return this.authService.sendRenewData(sendRenewDataDto);
 }
+
+
 }

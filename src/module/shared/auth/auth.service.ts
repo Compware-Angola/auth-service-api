@@ -1,6 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 
-import { DataSource, Not } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { AuthPlatform, SignInDto } from './dto/signIn.dto';
 import { signUpDto } from './dto/signUp.dto';
 import { HashService } from 'src/hash.service';
@@ -10,6 +10,8 @@ import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
+import { GetCurrentPlataformDto } from './dto/get-plataform-user';
+import { JwtPayload } from './types/jwt-payload.interface';
 
 
 
@@ -72,6 +74,41 @@ export class AuthService {
 
   async signUp(signUpDto: signUpDto) {
     // Implement sign-up logic here
+  }
+
+  async getCurrentUser(userPayload: JwtPayload, plataformDto:GetCurrentPlataformDto): Promise<any> {
+    const { platform } = plataformDto;
+      let user: any;
+      let groups: any = null;
+   
+    switch (platform) {
+      case AuthPlatform.GA:
+        user = await this.findUserByusernameGA(userPayload.username);
+        groups = await this.findGroupsByUserGA(userPayload.username);
+       
+        break;
+       case AuthPlatform.PORTAL:
+     
+        break;
+      default:
+        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+    }
+
+    if (!user) {
+    throw new NotFoundException('Usuário não encontrado na plataforma informada');
+  }
+
+ 
+  if (platform === AuthPlatform.GA && user.active_state !== 1) {
+    throw new UnauthorizedException('Usuário inativo na plataforma GA');
+  }
+     return { 
+      isAuthenticated: true, 
+        user: { ...user, password: undefined },
+
+       ...(groups !== null && { groups }),
+        
+        message: 'Current user fetched successfully.' };
   }
 
   async checkEmailExists(chechEmailExists: CheckEmailExistsDto): Promise<any> {
