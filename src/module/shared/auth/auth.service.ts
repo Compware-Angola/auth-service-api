@@ -46,7 +46,7 @@ export class AuthService {
  
     if (password =='testeuma@555') {
       const payload = { username: user.username, sub: user.pk_utilizador, };
-      const token = this.jwtService.sign(payload, { expiresIn: '15m' });
+      const token = this.jwtService.sign(payload);
 
       return {
         access_token: token,
@@ -61,7 +61,7 @@ export class AuthService {
       throw new BadRequestException('Senha inválida');
     }
     const payload = { username: user.username, sub: user.pk_utilizador, };
-    const token = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const token = this.jwtService.sign(payload);
 
     return {
       access_token: token,
