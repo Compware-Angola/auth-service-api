@@ -250,6 +250,7 @@ WHERE u.USERNAME = :username
         FROM fk2_mca_tb_grupo_acesso_removido r
         WHERE r.fk_acesso = a.pk_acesso
           AND r.fk_grupo = g.pk_grupo
+            AND r.fk_acesso = a.pk_acesso and r.ACTIVE_STATE = 1
       )`, [username]);
 
  return result.map((row: any) => row.SIGLA);
@@ -397,7 +398,7 @@ WHERE u.EMAIL= :email`, [email]);
 
 
   }
-async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
+ async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
     await this.dataSource.query(`UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword
     WHERE ID = :codigo`, [hashedPassword, codigo]);

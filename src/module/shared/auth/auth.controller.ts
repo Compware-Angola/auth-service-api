@@ -41,8 +41,7 @@ async getCurrentUser(
   @Req() req: any,
 ) {
   const userPayload = req.user; 
-  console.log('Payload JWT:', userPayload);
-  console.log('Platform solicitada:', query.platform);
+ 
 
   // Passe os dois: o payload do JWT + a platform escolhida
   return this.authService.getCurrentUser(userPayload, query);
@@ -50,11 +49,10 @@ async getCurrentUser(
 @Get('validate-token')
 @UseGuards(JwtAuthGuard) 
 @ApiBearerAuth('JWT-auth')
-validateToken(@Query() query: GetCurrentPlataformDto,
+validateToken(
   @Req() req: any,) {
      const userPayload = req.user; 
-  console.log('Payload JWT:', userPayload);
-  console.log('Platform solicitada:', query.platform);
+
     return { valid: true, user: userPayload };
 
 }
