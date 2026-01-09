@@ -23,7 +23,7 @@ export class AuthController {
   }
 
 @Get('current-user')
-@UseGuards(JwtAuthGuard) // continua protegendo com JWT
+@UseGuards(JwtAuthGuard) 
 @ApiBearerAuth('JWT-auth')
 @ApiOperation({ summary: 'Obtém informações do usuário atual em uma plataforma específica' })
 @ApiQuery({
@@ -37,7 +37,7 @@ export class AuthController {
 @ApiResponse({ status: 400, description: 'Platform inválida ou ausente.' })
 @ApiResponse({ status: 401, description: 'Não autorizado.' })
 async getCurrentUser(
-  @Query() query: GetCurrentPlataformDto, // Agora usa @Query()
+  @Query() query: GetCurrentPlataformDto,
   @Req() req: any,
 ) {
   const userPayload = req.user; 
@@ -46,6 +46,17 @@ async getCurrentUser(
 
   // Passe os dois: o payload do JWT + a platform escolhida
   return this.authService.getCurrentUser(userPayload, query);
+}
+@Get('validate-token')
+@UseGuards(JwtAuthGuard) 
+@ApiBearerAuth('JWT-auth')
+validateToken(@Query() query: GetCurrentPlataformDto,
+  @Req() req: any,) {
+     const userPayload = req.user; 
+  console.log('Payload JWT:', userPayload);
+  console.log('Platform solicitada:', query.platform);
+    return { valid: true, user: userPayload };
+
 }
 @Post('check-email')
 @ApiOperation({ summary: 'Verifica se o e-mail existe na plataforma especificada' })

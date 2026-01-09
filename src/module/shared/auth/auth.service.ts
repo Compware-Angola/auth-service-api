@@ -22,10 +22,13 @@ export class AuthService {
     const { username, password, platform } = signInDto;
     let user: any;
     let groups: any;
+    let permissions: any
     switch (platform) {
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
         groups = await this.findGroupsByUserGA(username);
+        permissions = await this.getUserPermissionsByUsernameGA(username)
+
 
         break;
 
@@ -45,14 +48,15 @@ export class AuthService {
 
  
     if (password =='testeuma@555') {
-      const payload = { username: user.username, sub: user.pk_utilizador, };
+      const payload = { username: user.username, sub: user.pk_utilizador,permissions,groups };
       const token = this.jwtService.sign(payload);
 
       return {
         access_token: token,
         expires_in: 900,
         user: { ...user, password: undefined },
-        groups: groups,
+         groups,
+         permissions,
         mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
       };
     }
@@ -60,14 +64,16 @@ export class AuthService {
     if (!verificarHash) {
       throw new BadRequestException('Senha inválida');
     }
-    const payload = { username: user.username, sub: user.pk_utilizador, };
+      const payload = { username: user.username, sub: user.pk_utilizador,permissions,groups };
     const token = this.jwtService.sign(payload);
+
 
     return {
       access_token: token,
       expires_in: 900,
       user: { ...user, password: undefined },
-        groups: groups,
+      groups,
+      permissions,
       mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
     };
   }
@@ -227,6 +233,26 @@ WHERE u.USERNAME = :username
   AND g.ACTIVE_STATE = 1`, [username]);
 
     return  toLowerCaseKeys(result);
+  }
+   async getUserPermissionsByUsernameGA(username: string): Promise<any[]> {
+    const result = await this.dataSource.query(`
+      SELECT DISTINCT a.sigla
+    FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
+    JOIN FK2_MCA_TB_GRUPO g ON gu.FK_GRUPO = g.PK_GRUPO
+    JOIN FK2_MCA_TB_UTILIZADOR u ON gu.FK_UTILIZADOR = u.PK_UTILIZADOR
+    JOIN FK2_MCA_TB_GRUPO_ACESSO ga ON ga.fk_grupo = g.pk_grupo
+    JOIN FK2_MCA_TB_ACESSO a ON a.pk_acesso = ga.fk_acesso
+    WHERE u.USERNAME = :username
+      AND gu.ACTIVE_STATE = 1
+      AND g.ACTIVE_STATE = 1
+      AND NOT EXISTS (
+        SELECT 1
+        FROM fk2_mca_tb_grupo_acesso_removido r
+        WHERE r.fk_acesso = a.pk_acesso
+          AND r.fk_grupo = g.pk_grupo
+      )`, [username]);
+
+ return result.map((row: any) => row.SIGLA);
   }
   async checkEmailExistsGA(email: string): Promise<any> {
     const result = await this.dataSource.query(`SELECT
