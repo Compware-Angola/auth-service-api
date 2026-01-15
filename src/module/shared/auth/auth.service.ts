@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 
 import { DataSource } from 'typeorm';
-import { AuthPlatform, SignInDto } from './dto/signIn.dto';
+import { AuthPlatform, LogoutDto, MakloggedOutDto, SignInDto } from './dto/signIn.dto';
 import { signUpDto } from './dto/signUp.dto';
 import { HashService } from 'src/hash.service';
 import { JwtService } from '@nestjs/jwt';
@@ -12,13 +12,19 @@ import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtPayload } from './types/jwt-payload.interface';
+import { UserSignInService } from './users.signIn.service';
 
 
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly dataSource: DataSource, private hashService: HashService, private readonly jwtService: JwtService, private readonly mailerService: MailerService) { }
-  async signIn(signInDto: SignInDto) {
+  constructor(private readonly dataSource: DataSource,
+    private hashService: HashService,
+    private readonly jwtService: JwtService,
+    private readonly mailerService: MailerService,
+    private readonly userSignInService: UserSignInService
+  ) { }
+  async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
     let user: any;
     let groups: any;
@@ -28,7 +34,17 @@ export class AuthService {
         user = await this.findUserByusernameGA(username);
         groups = await this.findGroupsByUserGA(username);
         permissions = await this.getUserPermissionsByUsernameGA(username)
+        console.log(user);
 
+
+        if (user) {
+          const peloadData = {
+            codigoutilizador: user.pk_utilizador,
+            ip: ip,
+            logado: true
+          }
+          await this.userSignInService.registrarOuAtualizarAcesso(peloadData.codigoutilizador, peloadData.ip, peloadData.logado)
+        }
 
         break;
 
@@ -39,24 +55,24 @@ export class AuthService {
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
-       if (!user) {
+    if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
     if (AuthPlatform.GA && user.active_state !== 1) {
       throw new NotFoundException('Usuário inativo, contate o administrador do sistema.');
     }
 
- 
-    if (password =='testeuma@555') {
-      const payload = { username: user.username, sub: user.pk_utilizador,permissions,groups };
+
+    if (password == 'testeuma@555') {
+      const payload = { username: user.username, sub: user.pk_utilizador, permissions, groups };
       const token = this.jwtService.sign(payload);
 
       return {
         access_token: token,
         expires_in: 900,
         user: { ...user, password: undefined },
-         groups,
-         permissions,
+        groups,
+        permissions,
         mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
       };
     }
@@ -64,7 +80,7 @@ export class AuthService {
     if (!verificarHash) {
       throw new BadRequestException('Senha inválida');
     }
-      const payload = { username: user.username, sub: user.pk_utilizador,permissions,groups };
+    const payload = { username: user.username, sub: user.pk_utilizador, permissions, groups };
     const token = this.jwtService.sign(payload);
 
 
@@ -77,44 +93,77 @@ export class AuthService {
       mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
     };
   }
+  async logout(logoutDto: LogoutDto, utilizadorId: number) {
+    const { platform } = logoutDto
+    switch (platform) {
+      case AuthPlatform.GA:
+
+        await this.userSignInService.makloggedOut(utilizadorId)
+
+        break;
+
+      case AuthPlatform.PORTAL:
+        console.log('Autenticação pela plataforma PORTAL');
+        break;
+
+      default:
+        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+    }
+
+    return {
+      message: 'Logout efetuado com sucesso',
+    };
+  }
 
   async signUp(signUpDto: signUpDto) {
     // Implement sign-up logic here
   }
 
-  async getCurrentUser(userPayload: JwtPayload, plataformDto:GetCurrentPlataformDto): Promise<any> {
+  async getCurrentUser(userPayload: JwtPayload, plataformDto: GetCurrentPlataformDto): Promise<any> {
     const { platform } = plataformDto;
-      let user: any;
-      let groups: any = null;
-   
+    let user: any;
+    let groups: any = null;
+    let isAuthenticated :any
+
     switch (platform) {
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(userPayload.username);
         groups = await this.findGroupsByUserGA(userPayload.username);
-       
-        break;
-       case AuthPlatform.PORTAL:
      
+
+
+        break;
+      case AuthPlatform.PORTAL:
+
         break;
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
     if (!user) {
-    throw new NotFoundException('Usuário não encontrado na plataforma informada');
-  }
+      throw new NotFoundException('Usuário não encontrado na plataforma informada');
+    }
+
+    if (platform === AuthPlatform.GA && user.active_state !== 1) {
+      throw new UnauthorizedException('Usuário inativo na plataforma GA');
+    }
+    
+       isAuthenticated = await this.userSignInService.statusLogged(user.pk_utilizador)
+       if(!isAuthenticated){
+     throw new UnauthorizedException('Por motivos de segurança, o seu acesso foi temporariamente suspenso. É necessário autenticar-se novamente');
+
+       }
 
  
-  if (platform === AuthPlatform.GA && user.active_state !== 1) {
-    throw new UnauthorizedException('Usuário inativo na plataforma GA');
-  }
-     return { 
-      isAuthenticated: true, 
-        user: { ...user, password: undefined },
+       
+    return {
+      isAuthenticated,
+      user: { ...user, password: undefined },
 
-       ...(groups !== null && { groups }),
-        
-        message: 'Current user fetched successfully.' };
+      ...(groups !== null && { groups }),
+
+      message: 'Current user fetched successfully.'
+    };
   }
 
   async checkEmailExists(chechEmailExists: CheckEmailExistsDto): Promise<any> {
@@ -133,7 +182,7 @@ export class AuthService {
         if (!existsPortal) {
           return { email, exists: false };
         }
-  
+
 
         return { email, exists: true };
 
@@ -141,7 +190,12 @@ export class AuthService {
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
   }
-
+  async makloggedOut(makloggedOutDto: MakloggedOutDto, codigoutilizador: number) {
+    await this.userSignInService.makloggedOut(codigoutilizador)
+    return {
+      message: 'Logout efetuado com sucesso',
+    };
+  }
   async SendchangePassword(sendchangePasswordDto: CheckEmailExistsDto) {
     const { email, platform } = sendchangePasswordDto;
     switch (platform) {
@@ -232,9 +286,9 @@ WHERE u.USERNAME = :username
   AND gu.ACTIVE_STATE = 1
   AND g.ACTIVE_STATE = 1`, [username]);
 
-    return  toLowerCaseKeys(result);
+    return toLowerCaseKeys(result);
   }
-   async getUserPermissionsByUsernameGA(username: string): Promise<any[]> {
+  async getUserPermissionsByUsernameGA(username: string): Promise<any[]> {
     const result = await this.dataSource.query(`
       SELECT DISTINCT a.sigla
     FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
@@ -253,7 +307,7 @@ WHERE u.USERNAME = :username
             AND r.fk_acesso = a.pk_acesso and r.ACTIVE_STATE = 1
       )`, [username]);
 
- return result.map((row: any) => row.SIGLA);
+    return result.map((row: any) => row.SIGLA);
   }
   async checkEmailExistsGA(email: string): Promise<any> {
     const result = await this.dataSource.query(`SELECT
@@ -280,18 +334,18 @@ WHERE u.EMAIL= :email`, [email]);
 
     return await toLowerCaseKeys(result[0]);
   }
- async checkEmailExistsPortal(email: string): Promise<any> {
-  const result = await this.dataSource.query(
-    `
+  async checkEmailExistsPortal(email: string): Promise<any> {
+    const result = await this.dataSource.query(
+      `
     SELECT *
     FROM FK2_USERS u
     WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))
     `,
-    [email.trim()]
-  );
+      [email.trim()]
+    );
 
-  return toLowerCaseKeys(result[0]);
-}
+    return toLowerCaseKeys(result[0]);
+  }
 
   async sendRenewData(peloadData: SendRenewDataDto) {
     const { email, enrrolment, phone, details, platform } = peloadData;
@@ -398,7 +452,7 @@ WHERE u.EMAIL= :email`, [email]);
 
 
   }
- async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
+  async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
     await this.dataSource.query(`UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword
     WHERE ID = :codigo`, [hashedPassword, codigo]);

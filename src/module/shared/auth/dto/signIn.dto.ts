@@ -32,3 +32,30 @@ export class SignInDto {
   @IsEnum(AuthPlatform)
   platform: AuthPlatform;
 }
+
+
+export class LogoutDto {
+
+
+  @ApiProperty({
+    example: 'GA',
+    description: 'Plataforma de autenticação',
+    enum: AuthPlatform,
+  })
+  @IsNotEmpty()
+  @IsEnum(AuthPlatform)
+  platform: AuthPlatform;
+}
+
+export class MakloggedOutDto {
+
+
+  @ApiProperty({
+    example: 'GA',
+    description: 'Plataforma de autenticação',
+    enum: AuthPlatform,
+  })
+  @IsNotEmpty()
+  @IsEnum(AuthPlatform)
+  platform: AuthPlatform;
+}
