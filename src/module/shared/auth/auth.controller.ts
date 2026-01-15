@@ -7,6 +7,7 @@ import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtAuthGuard } from '../guard/jwt-auth.guard';
+import { ActiveUserGuard } from '../guard/active-user.guard';
 
 @ApiTags('AUTH')
 @Controller('auth')
@@ -46,7 +47,8 @@ export class AuthController {
     return this.authService.getCurrentUser(userPayload, query);
   }
   @Get('validate-token')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard,ActiveUserGuard)
+  
   @ApiBearerAuth('JWT-auth')
   validateToken(
     @Req() req: any,) {
@@ -54,7 +56,6 @@ export class AuthController {
     return { valid: true, user: userPayload };
 
   }
-
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Post('logout')
