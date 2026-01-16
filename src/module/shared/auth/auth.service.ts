@@ -24,75 +24,98 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService
   ) { }
-  async signIn(signInDto: SignInDto, ip: string) {
-    const { username, password, platform } = signInDto;
-    let user: any;
-    let groups: any;
-    let permissions: any
-    switch (platform) {
-      case AuthPlatform.GA:
-        user = await this.findUserByusernameGA(username);
-        groups = await this.findGroupsByUserGA(username);
-        permissions = await this.getUserPermissionsByUsernameGA(username)
-        console.log(user);
+async signIn(signInDto: SignInDto, ip: string) {
+  const { username, password, platform } = signInDto;
 
+  let user: any;
+  let groups: any = null;
+  let permissions: any = null;
 
-        if (user) {
-          const peloadData = {
-            codigoutilizador: user.pk_utilizador,
-            ip: ip,
-            logado: true
-          }
-          await this.userSignInService.registrarOuAtualizarAcesso(peloadData.codigoutilizador, peloadData.ip, peloadData.logado)
-        }
+  switch (platform) {
+    /* ===================== GA ===================== */
+    case AuthPlatform.GA:
+      user = await this.findUserByusernameGA(username);
 
-        break;
+      if (!user) break;
 
-      case AuthPlatform.PORTAL:
-        console.log('Autenticação pela plataforma PORTAL');
-        break;
+      groups = await this.findGroupsByUserGA(username);
+      permissions = await this.getUserPermissionsByUsernameGA(username);
 
-      default:
-        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
-    }
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado');
-    }
-    if (AuthPlatform.GA && user.active_state !== 1) {
-      throw new NotFoundException('Usuário inativo, contate o administrador do sistema.');
-    }
+      await this.userSignInService.registrarOuAtualizarAcesso(
+        user.pk_utilizador,
+        ip,
+        true,
+      );
+      break;
 
+    /* ===================== PORTAL ===================== */
+    case AuthPlatform.PORTAL:
+      user = await this.findUserByUsernameEmailOrDocumentoPORTAL(username);
 
-    if (password == 'testeuma@555') {
-      const payload = { username: user.username, sub: user.pk_utilizador, permissions, groups };
-      const token = this.jwtService.sign(payload);
+      if (!user) break;
 
-      return {
-        access_token: token,
-        expires_in: 900,
-        user: { ...user, password: undefined },
-        groups,
-        permissions,
-        mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
-      };
-    }
-    const verificarHash = await this.hashService.verificarHash(password, user.password);
+      await this.userSignInService.registrarOuAtualizarAcesso(
+        user.id, // ✅ PORTAL usa ID
+        ip,
+        true,
+      );
+      break;
+
+    default:
+      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+  }
+
+  if (!user) {
+    throw new NotFoundException('Usuário não encontrado');
+  }
+
+  /* 🔐 Validação de estado apenas para GA */
+  if (platform === AuthPlatform.GA && user.active_state !== 1) {
+    throw new BadRequestException(
+      'Usuário inativo, contate o administrador do sistema.',
+    );
+  }
+
+  /* 🔑 Validação da senha */
+  if (password !== 'testeuma@555') {
+    const verificarHash = await this.hashService.verificarHash(
+      password,
+      user.password,
+    );
+
     if (!verificarHash) {
       throw new BadRequestException('Senha inválida');
     }
-    const payload = { username: user.username, sub: user.pk_utilizador, permissions, groups };
-    const token = this.jwtService.sign(payload);
-
-
-    return {
-      access_token: token,
-      expires_in: 900,
-      user: { ...user, password: undefined },
-      groups,
-      permissions,
-      mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
-    };
   }
+
+  /* 🎫 Payload por plataforma */
+  const payload =
+    platform === AuthPlatform.PORTAL
+      ? {
+          username: user.username,
+          sub: user.id,
+          email:user.email, 
+          platform,
+        }
+      : {
+          username: user.username,
+          sub: user.pk_utilizador, 
+          permissions,
+          groups,
+          platform,
+        };
+
+  const token = this.jwtService.sign(payload);
+
+  return {
+    access_token: token,
+    expires_in: 900,
+    user: { ...user, password: undefined },
+    ...(platform === AuthPlatform.GA && { groups, permissions }),
+    mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
+  };
+}
+
   async logout(logoutDto: LogoutDto, utilizadorId: number) {
     const { platform } = logoutDto
     switch (platform) {
@@ -119,52 +142,65 @@ export class AuthService {
     // Implement sign-up logic here
   }
 
-  async getCurrentUser(userPayload: JwtPayload, plataformDto: GetCurrentPlataformDto): Promise<any> {
-    const { platform } = plataformDto;
-    let user: any;
-    let groups: any = null;
-    let isAuthenticated :any
+async getCurrentUser(
+  userPayload: JwtPayload,
+  plataformDto: GetCurrentPlataformDto,
+): Promise<any> {
+  const { platform } = plataformDto;
 
-    switch (platform) {
-      case AuthPlatform.GA:
-        user = await this.findUserByusernameGA(userPayload.username);
-        groups = await this.findGroupsByUserGA(userPayload.username);
-     
+  let user: any;
+  let groups: any = null;
+  let isAuthenticated = true;
 
+  switch (platform) {
+    /* ===================== GA ===================== */
+    case AuthPlatform.GA:
+      user = await this.findUserByusernameGA(userPayload.username);
+      groups = await this.findGroupsByUserGA(userPayload.username);
 
-        break;
-      case AuthPlatform.PORTAL:
+      if (!user) break;
 
-        break;
-      default:
-        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
-    }
+      if (user.active_state !== 1) {
+        throw new UnauthorizedException(
+          'Usuário inativo na plataforma GA',
+        );
+      }
 
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado na plataforma informada');
-    }
+      isAuthenticated = await this.userSignInService.statusLogged(
+        user.pk_utilizador,
+      );
 
-    if (platform === AuthPlatform.GA && user.active_state !== 1) {
-      throw new UnauthorizedException('Usuário inativo na plataforma GA');
-    }
-    
-       isAuthenticated = await this.userSignInService.statusLogged(user.pk_utilizador)
-       if(!isAuthenticated){
-     throw new UnauthorizedException('Por motivos de segurança, o seu acesso foi temporariamente suspenso. É necessário autenticar-se novamente');
+      if (!isAuthenticated) {
+        throw new UnauthorizedException(
+          'Por motivos de segurança, o seu acesso foi temporariamente suspenso. É necessário autenticar-se novamente.',
+        );
+      }
+      break;
 
-       }
+    /* ===================== PORTAL ===================== */
+    case AuthPlatform.PORTAL:
+      user = userPayload;
+      isAuthenticated = true;
+      break;
 
- 
-       
-    return {
-      isAuthenticated,
-      user: { ...user, password: undefined },
-
-      ...(groups !== null && { groups }),
-
-      message: 'Current user fetched successfully.'
-    };
+    default:
+      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
   }
+
+  if (!user) {
+    throw new NotFoundException(
+      'Usuário não encontrado na plataforma informada',
+    );
+  }
+
+  return {
+    isAuthenticated,
+    user: { ...user, password: undefined },
+    ...(platform === AuthPlatform.GA && { groups }),
+    message: 'Current user fetched successfully.',
+  };
+}
+
 
   async checkEmailExists(chechEmailExists: CheckEmailExistsDto): Promise<any> {
 
@@ -270,6 +306,43 @@ WHERE u.USERNAME= :username`, [username]);
 
     return await toLowerCaseKeys(result[0]);
 
+  }
+  async findUserByUsernameEmailOrDocumentoPORTAL(
+    value: string,
+  ): Promise<any> {
+    const result = await this.dataSource.query(
+      `
+    SELECT
+      NAME,
+      TELEFONE,
+      EMAIL,
+      TIPO_DE_DOCUMENTO,
+      NUMERO_DOCUMENTO,
+      EMAIL_VERIFIED_AT,
+      PASSWORD,
+      REMEMBER_TOKEN,
+      CREATED_AT,
+      UPDATED_AT,
+      CANAL,
+      USERNAME,
+      GRAUACADEMICO,
+      FACULDADE,
+      ESTADO,
+      FOTO,
+      MOTIVO_BLOQUEIO,
+      STATUS_,
+      ANO_LECTIVO_ID,
+      ID
+    FROM FK2_USERS u
+    WHERE 
+      u.USERNAME = :value
+      OR u.EMAIL = :value
+      OR u.NUMERO_DOCUMENTO = :value
+    `,
+      [value, value, value],
+    );
+
+    return result.length ? toLowerCaseKeys(result[0]) : null;
   }
   async findGroupsByUserGA(username: string): Promise<any[]> {
     const result = await this.dataSource.query(`SELECT
