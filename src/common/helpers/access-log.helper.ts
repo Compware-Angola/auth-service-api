@@ -30,7 +30,7 @@ private static readonly BASE_URL = process.env.API_BASE_URL_ACESS_LOGS ?? 'http:
     const finalPayload: AccessLogPayload = {
       descricao: payload.descricao,
       fkAcesso: payload.fkAcesso ?? 0,
-      fkFuncionalidade: payload.fkFuncionalidade ?? 1,
+      fkFuncionalidade: payload.fkFuncionalidade ?? 15,
       fkUtilizadorResponsavel: payload.fkUtilizadorResponsavel ?? undefined,
       fkGrupoAfetado: payload.fkGrupoAfetado ?? 78,
       fkOperacaoLog: payload.fkOperacaoLog ?? 4,
