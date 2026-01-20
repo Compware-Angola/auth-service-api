@@ -99,6 +99,7 @@ async signIn(signInDto: SignInDto, ip: string) {
         }
       : {
           username: user.username,
+          nome:user.nome,
           sub: user.pk_utilizador, 
           permissions,
           groups,

@@ -8,11 +8,13 @@ import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtAuthGuard } from '../guard/jwt-auth.guard';
 import { ActiveUserGuard } from '../guard/active-user.guard';
+import { AccessLogHelper } from 'src/common/helpers/access-log.helper';
+import { HttpService } from '@nestjs/axios';
 
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService, private httpService: HttpService) { }
 
   @Post('login')
   @ApiOperation({ summary: 'Login do utilizador' })
@@ -21,9 +23,22 @@ export class AuthController {
   @ApiBody({ type: SignInDto })
   async signIn(@Body() signInDto: SignInDto, @Req() req: any) {
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    return this.authService.signIn(signInDto, ip);
-  }
+    const login = await this.authService.signIn(signInDto, ip);
 
+    if (signInDto.platform == AuthPlatform.GA) {
+     
+      
+     await AccessLogHelper.logAccess(this.httpService, {
+        descricao: `Utilizador ${login?.user?.nome} fez login com sucesso`,
+        fkUtilizadorResponsavel: login.user.pk_utilizador,
+        fkOperacaoLog: 7,
+        ip: req.ip,
+      });
+
+    }
+
+    return login
+  }
   @Get('current-user')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -47,8 +62,8 @@ export class AuthController {
     return this.authService.getCurrentUser(userPayload, query);
   }
   @Get('validate-token')
-  @UseGuards(JwtAuthGuard,ActiveUserGuard)
-  
+  @UseGuards(JwtAuthGuard, ActiveUserGuard)
+
   @ApiBearerAuth('JWT-auth')
   validateToken(
     @Req() req: any,) {
@@ -59,12 +74,24 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Post('logout')
-  async logout(@Req() req: any, @Body() query: LogoutDto) {
+  async logout(@Req() req: any, @Body() logoutDTO: LogoutDto) {
     const user = req.user;
-    return await this.authService.logout(
-      query,
+     await this.authService.logout(
+      logoutDTO,
       user.sub
     );
+
+        if (logoutDTO.platform == AuthPlatform.GA) {
+     
+      
+     await AccessLogHelper.logAccess(this.httpService, {
+        descricao: `Utilizador ${user?.nome} Terminou Sessão`,
+        fkUtilizadorResponsavel: user.sub,
+        fkOperacaoLog: 7,
+        ip: req.ip,
+      });
+
+    }
   }
 
   //@UseGuards(JwtAuthGuard)
