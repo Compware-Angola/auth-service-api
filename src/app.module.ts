@@ -1,15 +1,19 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HashService } from './hash.service';
+import { HashService } from './app.service';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './jwt.constants';
-import { HashController } from './hash.controller';
+import { HashController } from './app.controller';
 import { AuthModule } from './module/shared/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/studets/studets.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CronService } from './module/shared/job/cron';
+import { UserSignInService } from './module/shared/auth/users.signIn.service';
 @Module({
   imports: [
+    ScheduleModule.forRoot(), 
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -69,6 +73,6 @@ import { StudetsModule } from './module/studets/studets.module';
     StudetsModule,
   ],
   controllers: [HashController],
-  providers: [HashService],
+  providers: [HashService,CronService,UserSignInService],
 })
 export class AppModule { }

@@ -1,5 +1,5 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { HashService } from 'src/hash.service';
+import { HashService } from 'src/app.service';
 import { DataSource } from 'typeorm';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateUserDto } from './dto/update-user-student-data.dto';

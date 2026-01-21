@@ -6,7 +6,7 @@ import {
   HttpStatus,
   Get,
 } from '@nestjs/common';
-import { HashService } from './hash.service';
+import { HashService } from './app.service';
 import { JwtService } from '@nestjs/jwt';
 
 import {

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
-import { HashService } from 'src/hash.service';
+import { HashService } from 'src/app.service';
 import { UserSignInService } from './users.signIn.service';
 import { HttpModule } from '@nestjs/axios';
 

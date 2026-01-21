@@ -111,22 +111,21 @@ export class UserSignInService {
      * (Opcional) Limpar sessões antigas / inativas
      * Exemplo: marcar como deslogado tudo que não atualizou há mais de 24h
      */
-    async limparSessoesAntigas(horasInatividade: number = 24): Promise<void> {
-        const limite = new Date();
-        limite.setHours(limite.getHours() - horasInatividade);
+   async ClearOldSessions(horasInatividade: number = 24): Promise<void> {
+  const limite = new Date();
+  limite.setHours(limite.getHours() - horasInatividade);
 
-        const dataLimite = limite.toISOString().slice(0, 19).replace('T', ' ');
+  await this.dataSource.query(
+    `
+    UPDATE FK2_TB_CONTROLE_ACESSO_UTILIZADOR
+    SET LOGADO = 0
+    WHERE LOGADO = 1 
+      AND DATA < :dataLimite
+    `,
+    [limite], // <-- Date real, não string
+  );
+}
 
-        await this.dataSource.query(
-            `
-      UPDATE FK2_TB_CONTROLE_ACESSO_UTILIZADOR
-      SET LOGADO = 0
-      WHERE LOGADO = 1 
-        AND DATA < :dataLimite
-      `,
-            [dataLimite],
-        );
-    }
 
 
 

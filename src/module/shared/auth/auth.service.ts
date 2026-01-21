@@ -3,7 +3,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { DataSource } from 'typeorm';
 import { AuthPlatform, LogoutDto, MakloggedOutDto, SignInDto } from './dto/signIn.dto';
 import { signUpDto } from './dto/signUp.dto';
-import { HashService } from 'src/hash.service';
+import { HashService } from 'src/app.service';
 import { JwtService } from '@nestjs/jwt';
 import { toLowerCaseKeys } from 'src/util/toLowerCaseKeys';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
