@@ -94,7 +94,8 @@ async signIn(signInDto: SignInDto, ip: string) {
       ? {
           username: user.username,
           sub: user.id,
-          email:user.email, 
+          email:user.email,
+          codigoPreinscricao:user.codigo_preinscricao, 
           platform,
         }
       : {
@@ -314,33 +315,37 @@ WHERE u.USERNAME= :username`, [username]);
     const result = await this.dataSource.query(
       `
     SELECT
-      NAME,
-      TELEFONE,
-      EMAIL,
-      TIPO_DE_DOCUMENTO,
-      NUMERO_DOCUMENTO,
-      EMAIL_VERIFIED_AT,
-      PASSWORD,
-      REMEMBER_TOKEN,
-      CREATED_AT,
-      UPDATED_AT,
-      CANAL,
-      USERNAME,
-      GRAUACADEMICO,
-      FACULDADE,
-      ESTADO,
-      FOTO,
-      MOTIVO_BLOQUEIO,
-      STATUS_,
-      ANO_LECTIVO_ID,
-      ID
+      u.NAME,
+     u.TELEFONE,
+      u.EMAIL,
+      u.TIPO_DE_DOCUMENTO,
+      u.NUMERO_DOCUMENTO,
+      u.EMAIL_VERIFIED_AT,
+      u.PASSWORD,
+     u.REMEMBER_TOKEN,
+      u.CREATED_AT,
+      u.UPDATED_AT,
+      u.CANAL,
+      u.USERNAME,
+      u.GRAUACADEMICO,
+      u.FACULDADE,
+     u. ESTADO,
+     u. FOTO,
+    u. MOTIVO_BLOQUEIO,
+      u.STATUS_,
+      u.ANO_LECTIVO_ID,
+      u.ID,
+      p.CODIGO AS codigoPreinscricao,
+      p.NOME_COMPLETO AS nomeCompleto
     FROM FK2_USERS u
+    LEFT JOIN FK2_TB_PREINSCRICAO p ON u.ID = p.USER_ID
     WHERE 
       u.USERNAME = :value
       OR u.EMAIL = :value
       OR u.NUMERO_DOCUMENTO = :value
+      OR p.BILHETE_IDENTIDADE = :value
     `,
-      [value, value, value],
+      [value, value, value, value],
     );
 
     return result.length ? toLowerCaseKeys(result[0]) : null;
