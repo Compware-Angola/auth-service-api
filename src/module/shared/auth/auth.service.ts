@@ -24,99 +24,99 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService
   ) { }
-async signIn(signInDto: SignInDto, ip: string) {
-  const { username, password, platform } = signInDto;
+  async signIn(signInDto: SignInDto, ip: string) {
+    const { username, password, platform } = signInDto;
 
-  let user: any;
-  let groups: any = null;
-  let permissions: any = null;
+    let user: any;
+    let groups: any = null;
+    let permissions: any = null;
 
-  switch (platform) {
-    /* ===================== GA ===================== */
-    case AuthPlatform.GA:
-      user = await this.findUserByusernameGA(username);
+    switch (platform) {
+      /* ===================== GA ===================== */
+      case AuthPlatform.GA:
+        user = await this.findUserByusernameGA(username);
 
-      if (!user) break;
+        if (!user) break;
 
-      groups = await this.findGroupsByUserGA(username);
-      permissions = await this.getUserPermissionsByUsernameGA(username);
+        groups = await this.findGroupsByUserGA(username);
+        permissions = await this.getUserPermissionsByUsernameGA(username);
 
-      await this.userSignInService.registrarOuAtualizarAcesso(
-        user.pk_utilizador,
-        ip,
-        true,
-      );
-      break;
+        await this.userSignInService.registrarOuAtualizarAcesso(
+          user.pk_utilizador,
+          ip,
+          true,
+        );
+        break;
 
-    /* ===================== PORTAL ===================== */
-    case AuthPlatform.PORTAL:
-      user = await this.findUserByUsernameEmailOrDocumentoPORTAL(username);
+      /* ===================== PORTAL ===================== */
+      case AuthPlatform.PORTAL:
+        user = await this.findUserByUsernameEmailOrDocumentoPORTAL(username);
 
-      if (!user) break;
+        if (!user) break;
 
-      await this.userSignInService.registrarOuAtualizarAcesso(
-        user.id, // ✅ PORTAL usa ID
-        ip,
-        true,
-      );
-      break;
+        await this.userSignInService.registrarOuAtualizarAcesso(
+          user.id, 
+          ip,
+          true,
+        );
+        break;
 
-    default:
-      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
-  }
-
-  if (!user) {
-    throw new NotFoundException('Usuário não encontrado');
-  }
-
-  /* 🔐 Validação de estado apenas para GA */
-  if (platform === AuthPlatform.GA && user.active_state !== 1) {
-    throw new BadRequestException(
-      'Usuário inativo, contate o administrador do sistema.',
-    );
-  }
-
-  /* 🔑 Validação da senha */
-  if (password !== 'testeuma@555') {
-    const verificarHash = await this.hashService.verificarHash(
-      password,
-      user.password,
-    );
-
-    if (!verificarHash) {
-      throw new BadRequestException('Senha inválida');
+      default:
+        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
-  }
 
-  /* 🎫 Payload por plataforma */
-  const payload =
-    platform === AuthPlatform.PORTAL
-      ? {
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    /* 🔐 Validação de estado apenas para GA */
+    if (platform === AuthPlatform.GA && user.active_state !== 1) {
+      throw new BadRequestException(
+        'Usuário inativo, contate o administrador do sistema.',
+      );
+    }
+
+    /* 🔑 Validação da senha */
+    if (password !== 'testeuma@555') {
+      const verificarHash = await this.hashService.verificarHash(
+        password,
+        user.password,
+      );
+
+      if (!verificarHash) {
+        throw new BadRequestException('Senha inválida');
+      }
+    }
+
+    /* 🎫 Payload por plataforma */
+    const payload =
+      platform === AuthPlatform.PORTAL
+        ? {
           username: user.username,
           sub: user.id,
-          email:user.email,
-          codigoPreinscricao:user.codigo_preinscricao, 
+          email: user.email,
+          codigoPreinscricao: user.codigo_preinscricao,
           platform,
         }
-      : {
+        : {
           username: user.username,
-          nome:user.nome,
-          sub: user.pk_utilizador, 
+          nome: user.nome,
+          sub: user.pk_utilizador,
           permissions,
           groups,
           platform,
         };
 
-  const token = this.jwtService.sign(payload);
+    const token = this.jwtService.sign(payload);
 
-  return {
-    access_token: token,
-    expires_in: 900,
-    user: { ...user, password: undefined },
-    ...(platform === AuthPlatform.GA && { groups, permissions }),
-    mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
-  };
-}
+    return {
+      access_token: token,
+      expires_in: 900,
+      user: { ...user, password: undefined },
+      ...(platform === AuthPlatform.GA && { groups, permissions }),
+      mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
+    };
+  }
 
   async logout(logoutDto: LogoutDto, utilizadorId: number) {
     const { platform } = logoutDto
@@ -144,64 +144,72 @@ async signIn(signInDto: SignInDto, ip: string) {
     // Implement sign-up logic here
   }
 
-async getCurrentUser(
-  userPayload: JwtPayload,
-  plataformDto: GetCurrentPlataformDto,
-): Promise<any> {
-  const { platform } = plataformDto;
+  async getCurrentUser(
+    userPayload: JwtPayload,
+    plataformDto: GetCurrentPlataformDto,
+  ): Promise<any> {
+    const { platform } = plataformDto;
 
-  let user: any;
-  let groups: any = null;
-  let isAuthenticated = true;
+    let user: any;
+    let groups: any = null;
+    let isAuthenticated = true;
+    let permissions: any = null;
 
-  switch (platform) {
-    /* ===================== GA ===================== */
-    case AuthPlatform.GA:
-      user = await this.findUserByusernameGA(userPayload.username);
-      groups = await this.findGroupsByUserGA(userPayload.username);
+    switch (platform) {
+      /* ===================== GA ===================== */
+      case AuthPlatform.GA:
+        user = await this.findUserByusernameGA(userPayload.username);
+        groups = await this.findGroupsByUserGA(userPayload.username);
+        permissions = await this.getUserPermissionsByUsernameGA(userPayload.username);
 
-      if (!user) break;
+        if (!user) break;
 
-      if (user.active_state !== 1) {
-        throw new UnauthorizedException(
-          'Usuário inativo na plataforma GA',
+        if (user.active_state !== 1) {
+          throw new UnauthorizedException(
+            'Usuário inativo na plataforma GA',
+          );
+        }
+
+        isAuthenticated = await this.userSignInService.statusLogged(
+          user.pk_utilizador,
         );
-      }
 
-      isAuthenticated = await this.userSignInService.statusLogged(
-        user.pk_utilizador,
+        if (!isAuthenticated) {
+          throw new UnauthorizedException(
+            'Por motivos de segurança, o seu acesso foi temporariamente suspenso. É necessário autenticar-se novamente.',
+          );
+        }
+        break;
+
+      /* ===================== PORTAL ===================== */
+      case AuthPlatform.PORTAL:
+        user = userPayload;
+        isAuthenticated = true;
+        break;
+
+      default:
+        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+    }
+
+    if (!user) {
+      throw new NotFoundException(
+        'Usuário não encontrado na plataforma informada',
       );
+    }
 
-      if (!isAuthenticated) {
-        throw new UnauthorizedException(
-          'Por motivos de segurança, o seu acesso foi temporariamente suspenso. É necessário autenticar-se novamente.',
-        );
-      }
-      break;
+    return {
+      isAuthenticated,
+      user: user
+        ? { ...user, password: undefined }
+        : null,
+      ...(platform === AuthPlatform.GA && {
+        groups,
+        permissions,
+      }),
+      message: 'Current user fetched successfully.',
+    };
 
-    /* ===================== PORTAL ===================== */
-    case AuthPlatform.PORTAL:
-      user = userPayload;
-      isAuthenticated = true;
-      break;
-
-    default:
-      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
   }
-
-  if (!user) {
-    throw new NotFoundException(
-      'Usuário não encontrado na plataforma informada',
-    );
-  }
-
-  return {
-    isAuthenticated,
-    user: { ...user, password: undefined },
-    ...(platform === AuthPlatform.GA && { groups }),
-    message: 'Current user fetched successfully.',
-  };
-}
 
 
   async checkEmailExists(chechEmailExists: CheckEmailExistsDto): Promise<any> {

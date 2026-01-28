@@ -58,6 +58,8 @@ export class AuthController {
     @Req() req: any,
   ) {
     const userPayload = req.user;
+    console.log(userPayload);
+    
 
     return this.authService.getCurrentUser(userPayload, query);
   }
