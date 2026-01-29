@@ -386,6 +386,7 @@ WHERE u.USERNAME = :username
     WHERE u.USERNAME = :username
       AND gu.ACTIVE_STATE = 1
       AND g.ACTIVE_STATE = 1
+      AND a.ACTIVE_STATE = 1
       AND NOT EXISTS (
         SELECT 1
         FROM fk2_mca_tb_grupo_acesso_removido r
