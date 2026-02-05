@@ -116,7 +116,7 @@ export class AuthService {
       expires_in: 900,
 
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { groups, permissions, first_login: user.PRIMEIRO_LOG  }),
+      ...(platform === AuthPlatform.GA && { groups, permissions}),
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
