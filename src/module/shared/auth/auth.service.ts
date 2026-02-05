@@ -30,6 +30,7 @@ export class AuthService {
     let user: any;
     let groups: any = null;
     let permissions: any = null;
+    let first_login: any = 1
 
     switch (platform) {
       /* ===================== GA ===================== */
@@ -55,7 +56,7 @@ export class AuthService {
         if (!user) break;
 
         await this.userSignInService.registrarOuAtualizarAcesso(
-          user.id, 
+          user.id,
           ip,
           true,
         );
@@ -64,6 +65,7 @@ export class AuthService {
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
+
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
@@ -112,8 +114,9 @@ export class AuthService {
     return {
       access_token: token,
       expires_in: 900,
+
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { groups, permissions }),
+      ...(platform === AuthPlatform.GA && { groups, permissions, first_login: user.PRIMEIRO_LOG ?? 1 }),
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
@@ -242,51 +245,143 @@ export class AuthService {
       message: 'Logout efetuado com sucesso',
     };
   }
-  async SendchangePassword(sendchangePasswordDto: CheckEmailExistsDto) {
-    const { email, platform } = sendchangePasswordDto;
+  async SendchangePassword(dto: CheckEmailExistsDto) {
+    const { email, platform } = dto;
+
+    // Validação inicial da plataforma
+    if (![AuthPlatform.GA, AuthPlatform.PORTAL].includes(platform)) {
+      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+    }
+
+    let user: any; // Ajuste o tipo conforme tua entity (UserGA | UserPortal | etc)
+    let resetUrlBase: string;
+    let userId :number 
+
     switch (platform) {
       case AuthPlatform.GA:
-
+        user = await this.checkEmailExistsGA(email);
+        resetUrlBase = process.env.URL_GA || 'http://localhost:3000'; 
+        userId = user.pk_utilizador;
         break;
+
       case AuthPlatform.PORTAL:
-        const user = await this.checkEmailExistsPortal(email);
-        if (!user) {
-          throw new BadRequestException('Email não encontrado no portal.');
-        }
-        const payload = { sub: user.id, email: user.email };
-        const resetToken = this.jwtService.sign(payload, { expiresIn: '10m' });
-        const url_portal = process.env.URL_PORTAL;
+        user = await this.checkEmailExistsPortal(email);
+        resetUrlBase = process.env.URL_PORTAL || 'http://localhost:3001';
+        userId = user.id;
+        break;
 
-
-        const link = `${url_portal}/auth/renovar-senha/${resetToken}`;
-        console.log(link);
-
-        await this.sendEmail(email, 'Redefinição de Senha', `<p>Por favor, clique no link para redefinir sua senha. ${link}</p>`);
-        return { message: 'Email de redefinição de senha enviado com sucesso para o portal.' };
       default:
-        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+        // Nunca chega aqui por causa da validação inicial
+        throw new BadRequestException('Plataforma não suportada.');
     }
+
+    // Verificação comum às duas plataformas
+    if (!user) {
+      throw new BadRequestException('Email não encontrado.');
+    }
+
+    // Payload comum (ajuste campos conforme necessário)
+    const payload = {
+      sub:userId,
+      email: user.email,
+      platform, // opcional: ajuda no backend a saber de onde veio
+    };
+
+    // Token com expiração curta
+    const resetToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+
+    // Construção do link
+    const resetPath = platform === AuthPlatform.GA
+      ? '/auth/primeiro-acesso/redefinir'   // ou o path que usas no frontend GA
+      : '/auth/renovar-senha';
+
+    const resetLink = `${resetUrlBase}${resetPath}/${resetToken}`;
+
+    console.log(`[Reset Link - ${platform}]`, resetLink); // para debug
+
+    // Envio de email (podes parametrizar o assunto e template por plataforma se quiseres)
+    const subject = platform === AuthPlatform.GA
+      ? 'Configuração Inicial de Senha - Portal Académico GA'
+      : 'Redefinição de Senha - Portal Académico';
+
+    const html = `
+    <p>Olá,</p>
+    <p>Recebemos um pedido para ${platform === AuthPlatform.GA ? 'configurar' : 'redefinir'} a sua senha.</p>
+    <p>Clique no link abaixo para prosseguir (válido por 15 minutos):</p>
+    <p><a href="${resetLink}">${resetLink}</a></p>
+    <p>Se não solicitou esta ação, ignore este email.</p>
+    <p>Atenciosamente,<br>Equipa do Sistema Académico</p>
+  `;
+
+    await this.sendEmail(email, subject, html);
+
+    return {
+      message: `Email de ${platform === AuthPlatform.GA ? 'configuração' : 'redefinição'} de senha enviado com sucesso.`,
+    };
   }
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<any> {
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
     const { token, newPassword, platform } = resetPasswordDto;
-    const payload = this.jwtService.verify(token);
+
+    // 1. Validar plataforma logo no início
+    if (![AuthPlatform.GA, AuthPlatform.PORTAL].includes(platform)) {
+      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+    }
+
+    // 2. Verificar e decodificar o token JWT
+    let payload: { sub: number | string; email: string; platform?: AuthPlatform };
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException('Token inválido ou expirado.');
+    }
+
+    // 3. Verificar se o token é da plataforma correta (segurança extra)
+    if (payload.platform && payload.platform !== platform) {
+      throw new BadRequestException('Token não corresponde à plataforma informada.');
+    }
+
+    let userId: any;
+    let message: string;
+
     switch (platform) {
-      case AuthPlatform.PORTAL:
+      case AuthPlatform.GA: {
+        // Para GA, o sub já é o ID do utilizador
+        userId = payload.sub;
+
+        // Verifica se o utilizador existe (opcional, mas recomendado)
+        const user = await this.findUserByIdGA(userId); 
+        if (!user) {
+          throw new NotFoundException('Utilizador não encontrado no GA.');
+        }
+
+        // Atualiza a senha (já faz hash dentro do método, presumo)
+        await this.updatePasswordGA(userId, newPassword);
+
+        message = 'Senha configurada com sucesso no GA. Pode agora fazer login.';
+        break;
+      }
+
+      case AuthPlatform.PORTAL: {
+        // Para PORTAL, usamos o email do payload para buscar o utilizador
         const user = await this.checkEmailExistsPortal(payload.email);
         if (!user) {
-          throw new NotFoundException('Usuário não encontrado no portal.');
+          throw new NotFoundException('Utilizador não encontrado no Portal.');
         }
 
+        userId = user.id;
 
+        // Hash da senha (obrigatório aqui)
         const hashedPassword = await this.hashService.criarHash(newPassword);
 
-        await this.updatePasswordPortal(user.id, hashedPassword);
+        // Atualiza
+        await this.updatePasswordPortal(userId, hashedPassword);
 
-        return { message: 'Senha redefinida com sucesso no portal.' };
-
-      default:
-        throw new BadRequestException('Plataforma inválida. Use PORTAL para redefinir a senha.');
+        message = 'Senha redefinida com sucesso no Portal.';
+        break;
+      }
     }
+
+    return { message };
   }
   async findUserByusernameGA(username: string): Promise<any> {
     const result = await this.dataSource.query(`SELECT
@@ -313,6 +408,37 @@ export class AuthService {
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
 WHERE u.USERNAME= :username`, [username]);
+
+    return await toLowerCaseKeys(result[0]);
+
+  }
+
+
+  async findUserByIdGA(codigo: number): Promise<any> {
+    const result = await this.dataSource.query(`SELECT
+    u.CODIGO_IMPORTADO,
+    u.NOME,
+    u.USERNAME,
+    u.PASSWORD,
+    u.CODIGO,
+    u.EMAIL,
+    u.OBS,
+    u.USER_PERTENCE,
+    u.CREATED_BY,
+    u.LAST_UPDATED_BY,
+    u.CREATED_AT,
+    u.UPDATED_AT,
+    u.LAST_PASSWORD_CHANGE,
+    u.ACTIVE_STATE,
+  
+    u.FOTONAME,
+    u.PRIMEIRO_LOG,
+  
+  
+    u.NUMEROMAXIMOTENTATIVAS,
+    u.PK_UTILIZADOR
+FROM FK2_MCA_TB_UTILIZADOR u
+WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
 
     return await toLowerCaseKeys(result[0]);
 
@@ -418,7 +544,7 @@ WHERE u.USERNAME = :username
     u.NUMEROMAXIMOTENTATIVAS,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
-WHERE u.EMAIL= :email`, [email]);
+ WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))`, [email.trim()]);
 
     return await toLowerCaseKeys(result[0]);
   }
@@ -544,6 +670,18 @@ WHERE u.EMAIL= :email`, [email]);
     await this.dataSource.query(`UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword
     WHERE ID = :codigo`, [hashedPassword, codigo]);
+  }
+  async updatePasswordGA(codigo: number, hashedPassword: string): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE FK2_MCA_TB_UTILIZADOR
+     SET PASSWORD = :hashedPassword,
+         PRIMEIRO_LOG = 0
+      WHERE PK_UTILIZADOR = :codigo`,
+      {
+        hashedPassword,
+        codigo,
+      } as any
+    );
   }
 
   async sendEmail(to: string, subject: string, htmlContent: string, from?: string) {
