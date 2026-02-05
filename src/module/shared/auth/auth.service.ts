@@ -30,7 +30,7 @@ export class AuthService {
     let user: any;
     let groups: any = null;
     let permissions: any = null;
-    let first_login: any = 1
+   
 
     switch (platform) {
       /* ===================== GA ===================== */
@@ -116,7 +116,7 @@ export class AuthService {
       expires_in: 900,
 
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { groups, permissions, first_login: user.PRIMEIRO_LOG ?? 1 }),
+      ...(platform === AuthPlatform.GA && { groups, permissions, first_login: user.PRIMEIRO_LOG  }),
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
@@ -353,9 +353,9 @@ export class AuthService {
         if (!user) {
           throw new NotFoundException('Utilizador não encontrado no GA.');
         }
-
+     const hashedPassword = await this.hashService.criarHash(newPassword);
         // Atualiza a senha (já faz hash dentro do método, presumo)
-        await this.updatePasswordGA(userId, newPassword);
+        await this.updatePasswordGA(userId, hashedPassword);
 
         message = 'Senha configurada com sucesso no GA. Pode agora fazer login.';
         break;
