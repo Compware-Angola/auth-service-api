@@ -6,7 +6,7 @@ import { UpdateUserDto } from './dto/update-user-student-data.dto';
 
 
 @Injectable()
-export class StudetsService {
+export class UsersService {
   constructor(private readonly dataSource: DataSource, private hashService: HashService) { }
 
 

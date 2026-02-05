@@ -7,7 +7,7 @@ import { HashController } from './app.controller';
 import { AuthModule } from './module/shared/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { StudetsModule } from './module/studets/studets.module';
+import { StudetsModule } from './module/users/users.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CronService } from './module/shared/job/cron';
 import { UserSignInService } from './module/shared/auth/users.signIn.service';

@@ -1,14 +1,13 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Put } from '@nestjs/common';
-import { StudetsService } from './studets.service';
-import { CreateStudetDto } from './dto/create-studet.dto';
-import { UpdateStudetDto } from './dto/update-studet.dto';
+import { UsersService } from './users.service';
+
 import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { UpdateUserDto } from './dto/update-user-student-data.dto';
 
 @Controller('studets')
-export class StudetsController {
-  constructor(private readonly studetsService: StudetsService) { }
+export class UsersController {
+  constructor(private readonly usersService: UsersService) { }
 
 
 
@@ -22,7 +21,7 @@ export class StudetsController {
     @Param('userId') userId: number,
     @Body() resetPasswordDto: UpdatePasswordDto
   ) {
-    return this.studetsService.resetPassword(userId, resetPasswordDto)
+    return this.usersService.resetPassword(userId, resetPasswordDto)
   }
 
    @Put('users/:id')
@@ -34,7 +33,7 @@ export class StudetsController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     const userId = Number(id) 
-    return this.studetsService.updateDataUser(userId, updateUserDto)
+    return this.usersService.updateDataUser(userId, updateUserDto)
   }
 }
 
