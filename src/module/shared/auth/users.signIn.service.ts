@@ -19,6 +19,8 @@ export class UserSignInService {
         logado: boolean = true
 
     ): Promise<void> {
+        console.log(codigoutilizador,ip,logado);
+        
 
         const existe = await this.dataSource.query(
             `
@@ -32,19 +34,21 @@ export class UserSignInService {
 
 
         const count = Number(existe[0]?.TOTAL || 0);
+        const lastId =  await this.getRangeId()
 
         if (count === 0) {
             // INSERT
             await this.dataSource.query(
                 `
         INSERT INTO FK2_TB_CONTROLE_ACESSO_UTILIZADOR 
-        (CODIGOUTILIZADOR, IP, DATA, LOGADO)
-        VALUES (:cod, :ip, SYSDATE, :log)
+        (CODIGOUTILIZADOR, IP, DATA, LOGADO,CODIGO)
+        VALUES (:cod, :ip, SYSDATE, :log,:codigo)
         `,
                 {
                     cod: codigoutilizador,
                     ip: ip,
                     log: logado ? 1 : 0,
+                    codigo:lastId
 
                 } as any
             );
@@ -124,6 +128,16 @@ export class UserSignInService {
     `,
     [limite], // <-- Date real, não string
   );
+}
+
+private async getRangeId(){
+     const [maxId] = await this.dataSource.query(
+          `SELECT MAX(CODIGO) as maxcod
+           FROM FK2_TB_CONTROLE_ACESSO_UTILIZADOR
+           WHERE REGEXP_LIKE(Codigo, '^[0-9]+$')`,
+        );
+
+        return maxId.MAXCOD + 1 
 }
 
 
