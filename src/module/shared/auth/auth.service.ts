@@ -30,7 +30,7 @@ export class AuthService {
     let user: any;
     let groups: any = null;
     let permissions: any = null;
-   
+
 
     switch (platform) {
       /* ===================== GA ===================== */
@@ -116,7 +116,7 @@ export class AuthService {
       expires_in: 900,
 
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { groups, permissions}),
+      ...(platform === AuthPlatform.GA && { groups, permissions }),
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
@@ -255,12 +255,12 @@ export class AuthService {
 
     let user: any; // Ajuste o tipo conforme tua entity (UserGA | UserPortal | etc)
     let resetUrlBase: string;
-    let userId :number 
+    let userId: number
 
     switch (platform) {
       case AuthPlatform.GA:
         user = await this.checkEmailExistsGA(email);
-        resetUrlBase = process.env.URL_GA || 'http://localhost:3000'; 
+        resetUrlBase = process.env.URL_GA || 'http://localhost:3000';
         userId = user.pk_utilizador;
         break;
 
@@ -282,7 +282,7 @@ export class AuthService {
 
     // Payload comum (ajuste campos conforme necessário)
     const payload = {
-      sub:userId,
+      sub: userId,
       email: user.email,
       platform, // opcional: ajuda no backend a saber de onde veio
     };
@@ -349,12 +349,17 @@ export class AuthService {
         userId = payload.sub;
 
         // Verifica se o utilizador existe (opcional, mas recomendado)
-        const user = await this.findUserByIdGA(userId); 
+        const user = await this.findUserByIdGA(userId);
         if (!user) {
           throw new NotFoundException('Utilizador não encontrado no GA.');
         }
-     const hashedPassword = await this.hashService.criarHash(newPassword);
-        // Atualiza a senha (já faz hash dentro do método, presumo)
+        if (await this.hashService.verificarHash(newPassword, user.password)) {
+          throw new BadRequestException(
+            'A nova senha não pode ser igual à senha atual. Escolha uma senha diferente.',
+          );
+        }
+        const hashedPassword = await this.hashService.criarHash(newPassword);
+        // Atualiza a senha (já faz hash de   ntro do método, presumo)
         await this.updatePasswordGA(userId, hashedPassword);
 
         message = 'Senha configurada com sucesso no GA. Pode agora fazer login.';
