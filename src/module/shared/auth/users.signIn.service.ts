@@ -40,7 +40,7 @@ export class UserSignInService {
             await this.dataSource.query(
                 `
         INSERT INTO FK2_TB_CONTROLE_ACESSO_UTILIZADOR 
-        (CODIGOUTILIZADOR, IP, DATA, LOGADO,CODIGO)
+        (CODIGOUTILIZADOR, IP, DATA, LOGADO)
         VALUES (:cod, :ip, SYSDATE, :log)
         `,
                 {
