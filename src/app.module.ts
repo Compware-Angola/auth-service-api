@@ -8,12 +8,10 @@ import { AuthModule } from './module/shared/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/users/users.module';
-import { ScheduleModule } from '@nestjs/schedule';
-import { CronService } from './module/shared/job/cron';
 import { UserSignInService } from './module/shared/auth/users.signIn.service';
 @Module({
   imports: [
-    ScheduleModule.forRoot(), 
+  
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -73,6 +71,6 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
     StudetsModule,
   ],
   controllers: [HashController],
-  providers: [HashService,CronService,UserSignInService],
+  providers: [HashService,UserSignInService],
 })
 export class AppModule { }

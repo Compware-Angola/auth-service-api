@@ -30,8 +30,7 @@ export class UserSignInService {
       `,
             [codigoutilizador],
         );
-        console.log(existe);
-
+  
 
         const count = Number(existe[0]?.TOTAL || 0);
         const lastId =  await this.getRangeId()
@@ -41,13 +40,14 @@ export class UserSignInService {
             await this.dataSource.query(
                 `
         INSERT INTO FK2_TB_CONTROLE_ACESSO_UTILIZADOR 
-        (CODIGOUTILIZADOR, IP, DATA, LOGADO)
-        VALUES (:cod, :ip, SYSDATE, :log)
+        (CODIGOUTILIZADOR, IP, DATA, LOGADO,CODIGO)
+        VALUES (:cod, :ip, SYSDATE, :log,:codigo)
         `,
                 {
                     cod: codigoutilizador,
                     ip: ip,
-                    log: logado ? 1 : 0
+                    log: logado ? 1 : 0,
+                    codigo:lastId
 
                 } as any
             );
