@@ -9,30 +9,18 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/users/users.module';
 import { UserSignInService } from './module/shared/auth/users.signIn.service';
-
 @Module({
   imports: [
+  
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: (() => {
-        switch (process.env.NODE_ENV) {
-          case 'production':
-            return '.env.prod';       
-          case 'preprod':
-            return '.env.preprod';    
-          default:
-            return '.env.dev';        
-        }
-      })(),
+       envFilePath: process.env.ENV_FILE || '.env.dev',
     }),
-
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
       signOptions: { expiresIn: '2h' },
-    }),
-
-    TypeOrmModule.forRootAsync({
+    }), TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
@@ -57,8 +45,7 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
         };
       },
     }),
-
-    MailerModule.forRootAsync({
+        MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
@@ -69,20 +56,22 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
+          
           options: {
-            connectionTimeout: 60000,
-          },
+            connectionTimeout: 60000, 
+          }
         },
         defaults: {
           from: `"Suporte Uma" <${config.get<string>('MAIL_USER')}>`,
         },
       }),
     }),
-
+  
     AuthModule,
+  
     StudetsModule,
   ],
   controllers: [HashController],
-  providers: [HashService, UserSignInService],
+  providers: [HashService,UserSignInService],
 })
-export class AppModule {}
+export class AppModule { }
