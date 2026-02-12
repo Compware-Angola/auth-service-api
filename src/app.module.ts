@@ -28,7 +28,7 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
-      signOptions: { expiresIn: '2h' },
+      signOptions: { expiresIn: '6h' },
     }), TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
