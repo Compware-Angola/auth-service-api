@@ -12,9 +12,18 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
 @Module({
   imports: [
   
-    ConfigModule.forRoot({
+       ConfigModule.forRoot({
       isGlobal: true,
-       envFilePath: process.env.ENV_FILE || '.env.dev',
+      envFilePath: (() => {
+        switch (process.env.NODE_ENV) {
+          case 'production':
+            return '.env.prod';       
+          case 'preprod':
+            return '.env.preprod';    
+          default:
+            return '.env.dev';        
+        }
+      })(),
     }),
     JwtModule.register({
       global: true,
