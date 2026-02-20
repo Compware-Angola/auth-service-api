@@ -261,7 +261,7 @@ export class AuthService {
       case AuthPlatform.GA:
         user = await this.checkEmailExistsGA(email);
         resetUrlBase = process.env.URL_GA || 'http://localhost:3000';
-        userId = user.pk_utilizador;
+        userId = user?.pk_utilizador;
         break;
 
       case AuthPlatform.PORTAL:
