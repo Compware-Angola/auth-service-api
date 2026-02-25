@@ -79,8 +79,7 @@ export class AuthService {
     }
 
     /* 🔑 Validação da senha */
-    if (password !== 'testeuma@555') {
-      const verificarHash = await this.hashService.verificarHash(
+   const verificarHash = await this.hashService.verificarHash(
         password,
         user.password,
       );
@@ -88,7 +87,6 @@ export class AuthService {
       if (!verificarHash) {
         throw new BadRequestException('Senha inválida');
       }
-    }
 
     /* 🎫 Payload por plataforma */
     const payload =
