@@ -13,6 +13,7 @@ import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtPayload } from './types/jwt-payload.interface';
 import { UserSignInService } from './users.signIn.service';
+import { UserRole, UserRoles } from './types/ roles.enum';
 
 
 
@@ -28,7 +29,7 @@ export class AuthService {
     const { username, password, platform } = signInDto;
 
     let user: any;
-    let groups: any = null;
+    let roles: any = null;
     let permissions: any = null;
 
 
@@ -39,7 +40,7 @@ export class AuthService {
 
         if (!user) break;
 
-        groups = await this.findGroupsByUserGA(username);
+        roles = await this.checkUserRoles(username);
         permissions = await this.getUserPermissionsByUsernameGA(username);
 
         await this.userSignInService.registrarOuAtualizarAcesso(
@@ -79,14 +80,14 @@ export class AuthService {
     }
 
     /* 🔑 Validação da senha */
-   const verificarHash = await this.hashService.verificarHash(
-        password,
-        user.password,
-      );
+    const verificarHash = await this.hashService.verificarHash(
+      password,
+      user.password,
+    );
 
-      if (!verificarHash) {
-        throw new BadRequestException('Senha inválida');
-      }
+    if (!verificarHash) {
+      throw new BadRequestException('Senha inválida');
+    }
 
     /* 🎫 Payload por plataforma */
     const payload =
@@ -103,7 +104,7 @@ export class AuthService {
           nome: user.nome,
           sub: user.pk_utilizador,
           permissions,
-          groups,
+          roles,
           platform,
         };
 
@@ -114,7 +115,7 @@ export class AuthService {
       expires_in: 900,
 
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { groups, permissions }),
+      ...(platform === AuthPlatform.GA && { roles, permissions }),
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
@@ -152,7 +153,7 @@ export class AuthService {
     const { platform } = plataformDto;
 
     let user: any;
-    let groups: any = null;
+    let roles: any = null;
     let isAuthenticated = true;
     let permissions: any = null;
 
@@ -160,7 +161,7 @@ export class AuthService {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(userPayload.username);
-        groups = await this.findGroupsByUserGA(userPayload.username);
+        roles = await this.checkUserRoles(userPayload.username);
         permissions = await this.getUserPermissionsByUsernameGA(userPayload.username);
 
         if (!user) break;
@@ -204,7 +205,7 @@ export class AuthService {
         ? { ...user, password: undefined }
         : null,
       ...(platform === AuthPlatform.GA && {
-        groups,
+        roles,
         permissions,
       }),
       message: 'Current user fetched successfully.',
@@ -487,22 +488,29 @@ WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
 
     return result.length ? toLowerCaseKeys(result[0]) : null;
   }
-  async findGroupsByUserGA(username: string): Promise<any[]> {
-    const result = await this.dataSource.query(`SELECT
-    g.PK_GRUPO AS codigo,
-    g.DESIGNACAO AS designation,
-    g.SIGLA AS sigla,
-    g.FK_TIPO_DE_GRUPO AS type_group ,
-    tg.DESIGNACAO AS type_group_designation  
-FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
-JOIN FK2_MCA_TB_GRUPO g ON gu.FK_GRUPO = g.PK_GRUPO
-JOIN FK2_MCA_TB_UTILIZADOR u ON gu.FK_UTILIZADOR = u.PK_UTILIZADOR
-JOIN FK2_MCA_TB_TIPO_DE_GRUPO tg ON g.FK_TIPO_DE_GRUPO = tg.PK_TIPO_DE_GRUPO
-WHERE u.USERNAME = :username
-  AND gu.ACTIVE_STATE = 1
-  AND g.ACTIVE_STATE = 1`, [username]);
+  async checkUserRoles(username: string): Promise<UserRoles> {
+    const roles: UserRoles = {
+      [UserRole.DOCENTE]: false,
+      [UserRole.DIREITOR_CURSO]: false,
 
-    return toLowerCaseKeys(result);
+      // outros roles iniciam como false
+    };
+
+    // 1. Verificar se é docente
+    const docenteResult = await this.dataSource.query(`
+    SELECT td.CODIGO
+    FROM FK2_MGD_TB_DOCENTE td
+    INNER JOIN FK2_MCA_TB_UTILIZADOR tu 
+      ON json_value(td.CODIGO_UTILIZADOR, '$.pk') = tu.PK_UTILIZADOR
+    WHERE tu.USERNAME = :username
+  `, [username]);
+
+    if (docenteResult && docenteResult.length > 0) {
+      roles[UserRole.DOCENTE] = true;
+    }
+    // 2. outros roles aqui
+
+    return roles;
   }
   async getUserPermissionsByUsernameGA(username: string): Promise<any[]> {
     const result = await this.dataSource.query(`
