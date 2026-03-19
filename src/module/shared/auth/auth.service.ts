@@ -30,6 +30,7 @@ export class AuthService {
 
     let user: any;
     let roles: any = null;
+    let groups: any;
     let permissions: any = null;
 
 
@@ -37,6 +38,7 @@ export class AuthService {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
+        groups = await this.findGroupsByUserGA(username)
 
         if (!user) break;
 
@@ -115,7 +117,7 @@ export class AuthService {
       expires_in: 900,
 
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { roles, permissions }),
+      ...(platform === AuthPlatform.GA && { roles, groups, permissions }),
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
@@ -153,6 +155,7 @@ export class AuthService {
     const { platform } = plataformDto;
 
     let user: any;
+    let groups: any;
     let roles: any = null;
     let isAuthenticated = true;
     let permissions: any = null;
@@ -162,6 +165,7 @@ export class AuthService {
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(userPayload.username);
         roles = await this.checkUserRoles(userPayload.username);
+        groups = await this.findGroupsByUserGA(userPayload.username)
         permissions = await this.getUserPermissionsByUsernameGA(userPayload.username);
 
         if (!user) break;
@@ -206,6 +210,7 @@ export class AuthService {
         : null,
       ...(platform === AuthPlatform.GA && {
         roles,
+        groups,
         permissions,
       }),
       message: 'Current user fetched successfully.',
@@ -511,6 +516,23 @@ WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
     // 2. outros roles aqui
 
     return roles;
+  }
+  async findGroupsByUserGA(username: string): Promise<any[]> {
+    const result = await this.dataSource.query(`SELECT
+    g.PK_GRUPO AS codigo,
+    g.DESIGNACAO AS designation,
+    g.SIGLA AS sigla,
+    g.FK_TIPO_DE_GRUPO AS type_group ,
+    tg.DESIGNACAO AS type_group_designation  
+FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
+JOIN FK2_MCA_TB_GRUPO g ON gu.FK_GRUPO = g.PK_GRUPO
+JOIN FK2_MCA_TB_UTILIZADOR u ON gu.FK_UTILIZADOR = u.PK_UTILIZADOR
+JOIN FK2_MCA_TB_TIPO_DE_GRUPO tg ON g.FK_TIPO_DE_GRUPO = tg.PK_TIPO_DE_GRUPO
+WHERE u.USERNAME = :username
+  AND gu.ACTIVE_STATE = 1
+  AND g.ACTIVE_STATE = 1`, [username]);
+
+    return toLowerCaseKeys(result);
   }
   async getUserPermissionsByUsernameGA(username: string): Promise<any[]> {
     const result = await this.dataSource.query(`
