@@ -9,32 +9,41 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/users/users.module';
 import { UserSignInService } from './module/shared/auth/users.signIn.service';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.guard';
+
 @Module({
   imports: [
-  
-       ConfigModule.forRoot({
+    ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: (() => {
         switch (process.env.NODE_ENV) {
           case 'production':
-            return '.env.prod';       
+            return '.env.prod';
           case 'preprod':
-            return '.env.preprod';    
+            return '.env.preprod';
           default:
-            return '.env.dev';        
+            return '.env.dev';
         }
       })(),
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // ✅ 60 segundos em milissegundos
+        limit: 5,   // 5 pedidos por minuto
+      },
+    ]),
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
       signOptions: { expiresIn: '6h' },
-    }), TypeOrmModule.forRootAsync({
+    }),
+    TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const isSSL = config.get<string>('DB_SSL') === 'true';
-
         return {
           type: 'oracle' as const,
           host: config.get<string>('DB_HOST'),
@@ -42,11 +51,9 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
           username: config.get<string>('DB_USERNAME'),
           password: config.get<string>('DB_PASSWORD'),
           sid: config.get<string>('DB_SID'),
-
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: false,
           logging: ['query', 'error'],
-
           extra: {
             disableInsertDefaultValues: true,
             ...(isSSL ? { ssl: { rejectUnauthorized: true } } : {}),
@@ -54,7 +61,7 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
         };
       },
     }),
-        MailerModule.forRootAsync({
+    MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
@@ -65,22 +72,26 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
-          
           options: {
-            connectionTimeout: 60000, 
-          }
+            connectionTimeout: 60000,
+          },
         },
         defaults: {
           from: `"Suporte Uma" <${config.get<string>('MAIL_USER')}>`,
         },
       }),
     }),
-  
     AuthModule,
-  
     StudetsModule,
   ],
   controllers: [HashController],
-  providers: [HashService,UserSignInService],
+  providers: [
+    HashService,
+    UserSignInService,
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    }
+  ],
 })
 export class AppModule { }
