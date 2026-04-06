@@ -28,12 +28,15 @@ import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.gua
         }
       })(),
     }),
+    // Configuração do ThrottlerModule para limitar a 5 pedidos por minuto
+    /*
     ThrottlerModule.forRoot([
       {
         ttl: 60000, // ✅ 60 segundos em milissegundos
         limit: 5,   // 5 pedidos por minuto
       },
     ]),
+    */
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
@@ -88,10 +91,12 @@ import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.gua
   providers: [
     HashService,
     UserSignInService,
+    /*
     {
       provide: APP_GUARD,
       useClass: CustomThrottlerGuard,
     }
+    */
   ],
 })
 export class AppModule { }
