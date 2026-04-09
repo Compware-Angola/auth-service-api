@@ -21,7 +21,7 @@ export class SendRenewDataDto {
   })
   @IsEmail({}, { message: 'Insira um e-mail válido' })
   @IsNotEmpty({ message: 'O e-mail é obrigatório' })
-  email: string;
+  email!: string;
 
   @ApiProperty({
     description: 'Número de matrícula do estudante',
@@ -39,7 +39,7 @@ export class SendRenewDataDto {
   @IsString()
   @IsNotEmpty()
  
-  phone: string;
+  phone!: string;
 
   @ApiProperty({
     description: 'Motivo detalhado da solicitação',
@@ -49,7 +49,7 @@ export class SendRenewDataDto {
   @IsString()
   @IsNotEmpty()
  
-  details: string;
+  details!: string;
 
   @ApiProperty({
     example: 'PORTAL',
@@ -58,5 +58,5 @@ export class SendRenewDataDto {
   })
   @IsNotEmpty()
   @IsEnum(AuthPlatform)
-  platform: AuthPlatform;
+  platform!: AuthPlatform;
 }

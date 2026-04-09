@@ -18,7 +18,7 @@ export class ResetPasswordDto {
   })
   @IsNotEmpty({ message: 'O token é obrigatório' })
   @IsString({ message: 'O token deve ser uma string' })
-  token: string;
+  token!: string;
 
   @ApiProperty({
     description: 'Nova senha do usuário',
@@ -32,7 +32,7 @@ export class ResetPasswordDto {
     message:
       'A senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número',
   })
-  newPassword: string;
+  newPassword!: string;
   @ApiProperty({
     example: 'PORTAL',
     description: 'Plataforma de autenticação',
@@ -40,5 +40,5 @@ export class ResetPasswordDto {
   })
   @IsNotEmpty()
   @IsEnum(AuthPlatform)
-  platform: AuthPlatform;
+  platform!: AuthPlatform;
 }

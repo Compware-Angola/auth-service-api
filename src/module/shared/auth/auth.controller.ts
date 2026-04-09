@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../guard/jwt-auth.guard';
 import { ActiveUserGuard } from '../guard/active-user.guard';
 import { AccessLogHelper } from 'src/common/helpers/access-log.helper';
 import { HttpService } from '@nestjs/axios';
+import { UserUpdatePasswordDto } from './dto/user-update-password';
 
 @ApiTags('AUTH')
 @Controller('auth')
@@ -28,7 +29,7 @@ export class AuthController {
     if (signInDto.platform == AuthPlatform.GA) {
      
       
-     await AccessLogHelper.logAccess(this.httpService, {
+      AccessLogHelper.logAccess(this.httpService, {
         descricao: `Utilizador ${login?.user?.nome} fez login com sucesso`,
         fkUtilizadorResponsavel: login.user.pk_utilizador,
         fkOperacaoLog: 7,
@@ -58,10 +59,19 @@ export class AuthController {
     @Req() req: any,
   ) {
     const userPayload = req.user;
-    console.log(userPayload);
-    
-
     return this.authService.getCurrentUser(userPayload, query);
+  }
+
+  @Put('update-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Atualiza a senha do usuário autenticado' })
+  @ApiResponse({ status: 200, description: 'Senha atualizada com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Erro na atualização da senha.' })
+  @ApiBody({ type: UserUpdatePasswordDto })
+  async updatePassword(@Req() req: any, @Body() updatePasswordDto: UserUpdatePasswordDto) {
+    const userPayload = req.user;
+    return this.authService.UserupdatePassword(updatePasswordDto, userPayload.sub);
   }
   @Get('validate-token')
   @UseGuards(JwtAuthGuard, ActiveUserGuard)

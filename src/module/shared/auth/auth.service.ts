@@ -14,6 +14,7 @@ import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtPayload } from './types/jwt-payload.interface';
 import { UserSignInService } from './users.signIn.service';
 import { UserRole, UserRoles } from './types/ roles.enum';
+import { UserUpdatePasswordDto } from './dto/user-update-password';
 
 
 
@@ -121,6 +122,63 @@ export class AuthService {
       mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
+  async UserupdatePassword(dto: UserUpdatePasswordDto, usuarioLogadoId: number): Promise<{ message: string }> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      //
+      if (dto.novaSenha !== dto.confirmarNovaSenha) {
+        throw new BadRequestException('A nova senha e a confirmação não coincidem');
+      }
+
+      if (dto.senhaAtual === dto.novaSenha) {
+        throw new BadRequestException('A nova senha não pode ser igual à senha antiga');
+      }
+      // Verifica se o utilizador existe
+      const [user] = await queryRunner.manager.query(
+        `SELECT PASSWORD FROM FK2_MCA_TB_UTILIZADOR WHERE PK_UTILIZADOR = ${usuarioLogadoId} AND ROWNUM = 1`
+      );
+  
+
+      if (!user) {
+        throw new NotFoundException('Utilizador não encontrado');
+      }
+      const verificarHash = await this.hashService.verificarHash(
+        dto.senhaAtual,
+        user.PASSWORD,
+      );
+      if (!verificarHash) {
+        throw new BadRequestException('A senha atual está incorreta');
+      }
+
+      // Opção 1: bcrypt local
+      const hashedPassword: string = await this.hashService.criarHash(dto.novaSenha);
+
+
+      await queryRunner.manager.query(`
+      UPDATE FK2_MCA_TB_UTILIZADOR
+      SET 
+        PASSWORD = '${hashedPassword}',
+        LAST_PASSWORD_CHANGE = SYSDATE,
+       
+        UPDATED_AT = SYSDATE
+      WHERE PK_UTILIZADOR = ${usuarioLogadoId}
+    `);
+
+      await queryRunner.commitTransaction();
+
+      return { message: 'Senha atualizada com sucesso' };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+
 
   async logout(logoutDto: LogoutDto, utilizadorId: number) {
     const { platform } = logoutDto
