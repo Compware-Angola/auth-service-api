@@ -1,5 +1,5 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Req, Query, Put, Patch } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Param, UseGuards, Req, Query, Put, Patch, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { AuthPlatform, LogoutDto, MakloggedOutDto, SignInDto } from './dto/signIn.dto';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
@@ -61,6 +61,7 @@ export class AuthController {
     const userPayload = req.user;
     return this.authService.getCurrentUser(userPayload, query);
   }
+
 
   @Put('update-password')
   @UseGuards(JwtAuthGuard)

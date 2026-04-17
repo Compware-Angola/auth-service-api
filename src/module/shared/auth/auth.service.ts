@@ -39,6 +39,7 @@ export class AuthService {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
+      //  if(user?.ACTIVE_STATE)
         groups = await this.findGroupsByUserGA(username)
 
         if (!user) break;
@@ -450,6 +451,8 @@ export class AuthService {
 
     return { message };
   }
+
+
   async findUserByusernameGA(username: string): Promise<any> {
     const result = await this.dataSource.query(`SELECT
     u.CODIGO_IMPORTADO,
