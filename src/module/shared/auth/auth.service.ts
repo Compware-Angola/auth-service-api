@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 
 import { DataSource } from 'typeorm';
 import { AuthPlatform, LogoutDto, MakloggedOutDto, SignInDto } from './dto/signIn.dto';
@@ -39,7 +39,9 @@ export class AuthService {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
-      //  if(user?.ACTIVE_STATE)
+        if (user.active_state !== 1) {
+          throw new ForbiddenException('A sua conta está inativa. Contacte o administrador do sistema.');
+        }
         groups = await this.findGroupsByUserGA(username)
 
         if (!user) break;
@@ -141,7 +143,7 @@ export class AuthService {
       const [user] = await queryRunner.manager.query(
         `SELECT PASSWORD FROM FK2_MCA_TB_UTILIZADOR WHERE PK_UTILIZADOR = ${usuarioLogadoId} AND ROWNUM = 1`
       );
-  
+
 
       if (!user) {
         throw new NotFoundException('Utilizador não encontrado');
