@@ -39,7 +39,7 @@ export class AuthService {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
-        if (user.active_state !== 1) {
+        if (user?.active_state !== 1) {
           throw new ForbiddenException('A sua conta está inativa. Contacte o administrador do sistema.');
         }
         groups = await this.findGroupsByUserGA(username)
