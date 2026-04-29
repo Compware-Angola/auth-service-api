@@ -92,7 +92,7 @@ export class AuthService {
     );
 
     if (!verificarHash) {
-      throw new BadRequestException('Senha inválida');
+      throw new BadRequestException('Erro ao acessar a Conta');
     }
 
     /* 🎫 Payload por plataforma */
@@ -250,7 +250,7 @@ export class AuthService {
 
       /* ===================== PORTAL ===================== */
       case AuthPlatform.PORTAL:
-        user = userPayload;
+        user = await this.getPortalUserData(userPayload.sub);
         isAuthenticated = true;
         break;
 
@@ -779,7 +779,149 @@ FROM FK2_MCA_TB_UTILIZADOR u
       } as any
     );
   }
+  async getPortalUserData(userId: number, semestre?: string): Promise<any> {
+    const result = await this.dataSource.query(
+      `
+    SELECT
+      us.id                         AS user_id,
+      us.name                       AS nome_completo,
+      us.email                      AS email,
+      us.telefone                   AS telefone,
+      us.numero_documento           AS numero_documento,
+      p.Codigo                      AS codigo_preinscricao,
+      p.Nome_Completo,
+      p.Sexo,
+      p.Data_Nascimento,
+      p.Email,
+      p.Bilhete_Identidade,
+      p.Contactos_Telefonicos,
+      p.saldo_reset                 AS saldo_reset,
+      p.saldo_reset_anter           AS saldo_reset_anter,
+      p.codigo_tipo_candidatura     AS codigo_tipo_candidatura,
+      p.Curso_Candidatura           AS Curso_Candidatura,
+      a.codigo                      AS codigo_admissao,
+      a.data                        AS data_admissao,
+      a.mediafinal                  AS media_final,
+      m.Codigo                      AS codigo_matricula,
+      m.Data_Matricula,
+      m.estado_matricula,
+      m.Codigo_Curso,
+      m.Codigo_Aluno,
+      c.Designacao                  AS curso,
+      c.numero_max_cadeiras         AS max_cadeiras_curso,
+      t.Designacao                  AS turma,
+      s.Designacao                  AS sala,
+      per.Designacao                AS periodo,
+      per.Codigo                    AS periodoId,
+      us.foto                       AS foto,
+      us.updated_at                 AS data_actualizacao,
+      polos.id                      AS poloId,
+      c.duracao                     AS curso_duracao,
+      cr.duracao                    AS curso_duracao_candidatura,
+      polos.designacao              AS polo,
+      cr.Designacao                 AS curso_candidatura_designacao,
 
+      CASE
+        WHEN p.Codigo      IS NULL  THEN 'SEM_PRE_INSCRICAO'
+        WHEN a.codigo      IS NULL  THEN 'NAO_ADMITIDO'
+        WHEN a.mediafinal  < 10     THEN 'NAO_ADMITIDO'
+        WHEN a.mediafinal  >= 10    THEN
+          CASE
+            WHEN m.Codigo IS NULL   THEN 'ADMITIDO_SEM_MATRICULA'
+            ELSE                         'ALUNO_MATRICULADO'
+          END
+        ELSE                             'ALUNO_MATRICULADO'
+      END AS estado_aluno,
+
+      (
+        SELECT NVL(JSON_ARRAYAGG(j), '[]')
+        FROM (
+          SELECT JSON_OBJECT(
+                   'codigo'           VALUE conf2.Codigo,
+                   'codigo_matricula' VALUE conf2.Codigo_Matricula,
+                   'ano_lectivo'      VALUE conf2.Codigo_Ano_lectivo,
+                   'estado'           VALUE conf2.Estado,
+                   'classe'           VALUE conf2.Classe,
+                   'cadeirante'       VALUE conf2.Cadeirante,
+                   'canal'            VALUE conf2.canal
+                 ) AS j
+          FROM fk2_tb_confirmacoes conf2
+          WHERE conf2.Codigo_Matricula = m.Codigo
+            AND conf2.Classe IS NOT NULL
+            AND (:semestre1 IS NULL OR conf2.semestre = :semestre2)
+          ORDER BY conf2.Codigo_Ano_lectivo DESC, conf2.Classe DESC
+          FETCH FIRST 1 ROWS ONLY
+        )
+      ) AS confirmacoes
+
+    FROM fk2_users us
+
+      LEFT JOIN (
+        SELECT * FROM (
+          SELECT p.*, ROW_NUMBER() OVER (PARTITION BY p.user_id ORDER BY p.Codigo DESC) AS rn
+          FROM fk2_tb_preinscricao p
+        ) WHERE rn = 1
+      ) p ON p.user_id = us.id
+
+      LEFT JOIN (
+        SELECT * FROM (
+          SELECT a.*, ROW_NUMBER() OVER (PARTITION BY a.pre_incricao ORDER BY a.codigo DESC) AS rn
+          FROM fk2_tb_admissao a
+        ) WHERE rn = 1
+      ) a ON a.pre_incricao = p.Codigo
+
+      LEFT JOIN (
+        SELECT * FROM (
+          SELECT m.*, ROW_NUMBER() OVER (PARTITION BY m.Codigo_Aluno ORDER BY m.Codigo DESC) AS rn
+          FROM fk2_tb_matriculas m
+        ) WHERE rn = 1
+      ) m ON m.Codigo_Aluno = a.codigo
+
+      LEFT JOIN (
+        SELECT * FROM (
+          SELECT conf.*,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY conf.Codigo_Matricula
+                   ORDER BY
+                     CASE WHEN conf.semestre = :semestre3 THEN 0 ELSE 1 END ASC,
+                     conf.Codigo_Ano_lectivo DESC,
+                     conf.Classe DESC
+                 ) AS rn
+          FROM fk2_tb_confirmacoes conf
+          WHERE conf.Classe IS NOT NULL
+            AND (conf.semestre = :semestre4 OR conf.semestre IS NULL)
+        ) WHERE rn = 1
+      ) conf ON conf.Codigo_Matricula = m.Codigo
+
+      LEFT JOIN fk2_tb_cursos         c     ON c.Codigo              = m.Codigo_Curso
+      LEFT JOIN fk2_tb_cursos         cr    ON cr.Codigo             = p.Curso_Candidatura
+      LEFT JOIN fk2_tb_turmas         t     ON t.Codigo              = conf.Codigo_Turma
+      LEFT JOIN fk2_tb_salas          s     ON s.Codigo              = t.Codigo_Sala
+      LEFT JOIN fk2_tb_periodos       per   ON per.Codigo            = p.Codigo_Turno
+      LEFT JOIN fk2_polos             polos ON polos.id              = p.polo_id
+
+    WHERE us.id = :userId
+    `,
+      // 1 por cada placeholder na ordem que aparecem na query
+      [semestre, semestre, semestre, semestre, userId],
+    );
+
+    if (!result || result.length === 0) {
+      throw new NotFoundException('Utilizador não encontrado');
+    }
+
+    const row = await toLowerCaseKeys(result[0]);
+
+    if (row.confirmacoes && typeof row.confirmacoes === 'string') {
+      try {
+        row.confirmacoes = JSON.parse(row.confirmacoes);
+      } catch {
+        row.confirmacoes = [];
+      }
+    }
+
+    return row;
+  }
   async sendEmail(to: string, subject: string, htmlContent: string, from?: string) {
     await this.mailerService.sendMail({
       to: to,
