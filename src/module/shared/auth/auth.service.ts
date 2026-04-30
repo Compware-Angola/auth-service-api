@@ -823,7 +823,9 @@ FROM FK2_MCA_TB_UTILIZADOR u
 
       CASE
         WHEN p.Codigo      IS NULL  THEN 'SEM_PRE_INSCRICAO'
-        WHEN a.codigo      IS NULL  THEN 'NAO_ADMITIDO'
+        WHEN a.codigo      IS NULL  THEN 'SEM_ADMISSAO'
+        WHEN tc.id         IS NULL  THEN 'SEM_ADMISSAO'
+        WHEN tc. STATUS_    = 0     THEN 'AGUARDANDO_RESULTADO'
         WHEN a.mediafinal  < 10     THEN 'NAO_ADMITIDO'
         WHEN a.mediafinal  >= 10    THEN
           CASE
@@ -899,6 +901,8 @@ FROM FK2_MCA_TB_UTILIZADOR u
       LEFT JOIN fk2_tb_salas          s     ON s.Codigo              = t.Codigo_Sala
       LEFT JOIN fk2_tb_periodos       per   ON per.Codigo            = p.Codigo_Turno
       LEFT JOIN fk2_polos             polos ON polos.id              = p.polo_id
+      LEFT JOIN fk2_candidato_provas  tc    ON tc.candidato_id = p.Codigo
+      
 
     WHERE us.id = :userId
     `,
