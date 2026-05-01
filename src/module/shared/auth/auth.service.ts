@@ -822,17 +822,10 @@ FROM FK2_MCA_TB_UTILIZADOR u
       cr.Designacao                 AS curso_candidatura_designacao,
 
       CASE
-        WHEN p.Codigo      IS NULL  THEN 'SEM_PRE_INSCRICAO'
-        WHEN a.codigo      IS NULL  THEN 'SEM_ADMISSAO'
-        WHEN tc.id         IS NULL  THEN 'SEM_ADMISSAO'
-        WHEN tc. STATUS_    = 0     THEN 'AGUARDANDO_RESULTADO'
-        WHEN a.mediafinal  < 10     THEN 'NAO_ADMITIDO'
-        WHEN a.mediafinal  >= 10    THEN
-          CASE
-            WHEN m.Codigo IS NULL   THEN 'ADMITIDO_SEM_MATRICULA'
-            ELSE                         'ALUNO_MATRICULADO'
-          END
-        ELSE                             'ALUNO_MATRICULADO'
+        WHEN p.Codigo IS NULL                          THEN 'SEM_PRE_INSCRICAO'
+        WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL THEN 'ADMITIDO_SEM_MATRICULA'
+        WHEN m.Codigo IS NOT NULL                      THEN 'ALUNO_MATRICULADO'
+        ELSE                                                'PREINSCRITO'
       END AS estado_aluno,
 
       (
@@ -895,19 +888,17 @@ FROM FK2_MCA_TB_UTILIZADOR u
         ) WHERE rn = 1
       ) conf ON conf.Codigo_Matricula = m.Codigo
 
-      LEFT JOIN fk2_tb_cursos         c     ON c.Codigo              = m.Codigo_Curso
-      LEFT JOIN fk2_tb_cursos         cr    ON cr.Codigo             = p.Curso_Candidatura
-      LEFT JOIN fk2_tb_turmas         t     ON t.Codigo              = conf.Codigo_Turma
-      LEFT JOIN fk2_tb_salas          s     ON s.Codigo              = t.Codigo_Sala
-      LEFT JOIN fk2_tb_periodos       per   ON per.Codigo            = p.Codigo_Turno
-      LEFT JOIN fk2_polos             polos ON polos.id              = p.polo_id
-      LEFT JOIN fk2_candidato_provas  tc    ON tc.candidato_id = p.Codigo
+      LEFT JOIN fk2_tb_cursos         c     ON c.Codigo     = m.Codigo_Curso
+      LEFT JOIN fk2_tb_cursos         cr    ON cr.Codigo    = p.Curso_Candidatura
+      LEFT JOIN fk2_tb_turmas         t     ON t.Codigo     = conf.Codigo_Turma
+      LEFT JOIN fk2_tb_salas          s     ON s.Codigo     = t.Codigo_Sala
+      LEFT JOIN fk2_tb_periodos       per   ON per.Codigo   = p.Codigo_Turno
+      LEFT JOIN fk2_polos             polos ON polos.id     = p.polo_id
       
 
     WHERE us.id = :userId
     `,
-      // 1 por cada placeholder na ordem que aparecem na query
-      [semestre, semestre, semestre, semestre, userId],
+      { semestre1: semestre, semestre2: semestre, semestre3: semestre, semestre4: semestre, userId } as any,
     );
 
     if (!result || result.length === 0) {
