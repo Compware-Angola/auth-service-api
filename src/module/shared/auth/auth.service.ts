@@ -556,38 +556,94 @@ WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
 
     return result.length ? toLowerCaseKeys(result[0]) : null;
   }
+  private normalizeRole(value: string): string {
+    return value
+      ?.normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[()]/g, '')
+      .replace(/[-]/g, ' ')
+      .replace(/\s+/g, '_')
+      .toLowerCase()
+      .trim();
+  }
   async checkUserRoles(username: string): Promise<UserRoles> {
     const roles: UserRoles = {
       [UserRole.DOCENTE]: false,
       [UserRole.DIREITOR_CURSO]: false,
-
-      // outros roles iniciam como false
+      [UserRole.REITOR]: false,
+      [UserRole.FACULDADES]: false,
+      [UserRole.VICE_REITOR]: false,
+      [UserRole.ACESSOR_DO_REITOR]: false,
+      [UserRole.RESPONSAVEL_DO_GABINETE_DE_QUALIDADE_E_SERVICOS_PEDAGOGICOS]: false,
+      [UserRole.DIRECTOR]: false,
+      [UserRole.COORDENADOR]: false,
+      [UserRole.DECANO]: false,
     };
 
-    // 1. Verificar se é docente
-    const docenteResult = await this.dataSource.query(`
-    SELECT td.CODIGO
-    FROM FK2_MGD_TB_DOCENTE td
-    INNER JOIN FK2_MCA_TB_UTILIZADOR tu 
-      ON json_value(td.CODIGO_UTILIZADOR, '$.pk') = tu.PK_UTILIZADOR
-    WHERE tu.USERNAME = :username
-  `, [username]);
+    // =========================
+    // DOCENTE
+    // =========================
 
-    // 2. Verificar se é Diretor de curso
-    const diretorResult = await this.dataSource.query(`
-    SELECT f.PK_FACULDADE AS codigo
-    FROM FK2_MGD_TB_FACULDADE f
-    INNER JOIN FK2_MCA_TB_UTILIZADOR tu 
-      ON f.FK_DIRETOR = tu.PK_UTILIZADOR
-    WHERE tu.USERNAME = :username
-  `, [username]);
+    const docenteResult = await this.dataSource.query(
+      `
+      SELECT td.CODIGO
+      FROM FK2_MGD_TB_DOCENTE td
+      INNER JOIN FK2_MCA_TB_UTILIZADOR tu 
+        ON json_value(td.CODIGO_UTILIZADOR, '$.pk') = tu.PK_UTILIZADOR
+      WHERE tu.USERNAME = :1
+    `,
+      [username],
+    );
 
-    if (docenteResult && docenteResult.length > 0) {
+    if (docenteResult.length > 0) {
       roles[UserRole.DOCENTE] = true;
     }
-    // 2. outros roles aqui
-    if (diretorResult && diretorResult.length > 0) {
-      roles[UserRole.DIREITOR_CURSO] = true;
+
+    // =========================
+    // CARGOS ADMINISTRATIVOS
+    // =========================
+
+    const cargosResult = await this.dataSource.query(
+      `
+      SELECT
+        TC.DESCRICAO AS TIPO_CARGO_DESCRICAO
+      FROM FK2_MGU_TB_CARGOS_ADMINISTRATIVOS C
+      INNER JOIN FK2_TB_TIPO_CARGO_ADMINISTRATIVO TC 
+        ON C.FK_TIPO_CARGO = TC.PK_TIPO_CARGO
+      INNER JOIN FK2_MCA_TB_UTILIZADOR TU
+        ON C.FK_UTILIZADOR = TU.PK_UTILIZADOR
+      WHERE TU.USERNAME = :1
+      AND C.ACTIVE = 1
+    `,
+      [username],
+    );
+
+    // =========================
+    // MAPEAMENTO DOS ROLES
+    // =========================
+
+    const roleMap: Record<string, UserRole> = {
+      reitor: UserRole.REITOR,
+      faculdades: UserRole.FACULDADES,
+      vice_reitor: UserRole.VICE_REITOR,
+      acessor_a_do_reitor: UserRole.ACESSOR_DO_REITOR,
+      responsavel_do_gabinete_de_qualidade_e_servicos_pedagogicos:
+        UserRole.RESPONSAVEL_DO_GABINETE_DE_QUALIDADE_E_SERVICOS_PEDAGOGICOS,
+      director: UserRole.DIRECTOR,
+      coordenador: UserRole.COORDENADOR,
+      decano: UserRole.DECANO,
+    };
+
+    for (const cargo of cargosResult) {
+      const descricaoNormalizada = this.normalizeRole(
+        cargo.TIPO_CARGO_DESCRICAO,
+      );
+
+      const mappedRole = roleMap[descricaoNormalizada];
+
+      if (mappedRole) {
+        roles[mappedRole] = true;
+      }
     }
 
     return roles;
