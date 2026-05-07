@@ -573,10 +573,22 @@ WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
     WHERE tu.USERNAME = :username
   `, [username]);
 
+    // 2. Verificar se é Diretor de curso
+    const diretorResult = await this.dataSource.query(`
+    SELECT f.PK_FACULDADE AS codigo
+    FROM FK2_MGD_TB_FACULDADE f
+    INNER JOIN FK2_MCA_TB_UTILIZADOR tu 
+      ON f.FK_DIRETOR = tu.PK_UTILIZADOR
+    WHERE tu.USERNAME = :username
+  `, [username]);
+
     if (docenteResult && docenteResult.length > 0) {
       roles[UserRole.DOCENTE] = true;
     }
     // 2. outros roles aqui
+    if (diretorResult && diretorResult.length > 0) {
+      roles[UserRole.DIREITOR_CURSO] = true;
+    }
 
     return roles;
   }
