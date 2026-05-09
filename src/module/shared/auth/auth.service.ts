@@ -15,6 +15,7 @@ import { JwtPayload } from './types/jwt-payload.interface';
 import { UserSignInService } from './users.signIn.service';
 import { UserRole, UserRoles } from './types/ roles.enum';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
+import { AnoLectivoUtil } from 'src/util/current-academic-year';
 
 
 
@@ -24,7 +25,8 @@ export class AuthService {
     private hashService: HashService,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
-    private readonly userSignInService: UserSignInService
+    private readonly userSignInService: UserSignInService,
+    private readonly anoLectivoUtil: AnoLectivoUtil
   ) { }
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
@@ -250,7 +252,9 @@ export class AuthService {
 
       /* ===================== PORTAL ===================== */
       case AuthPlatform.PORTAL:
-        user = await this.getPortalUserData(userPayload.sub);
+        const semestre = await this.anoLectivoUtil.getSemestreAtual();
+        const semestreAtual = semestre.semestre ?? 1;
+        user = await this.getPortalUserData(userPayload.sub, semestreAtual);
         isAuthenticated = true;
         break;
 
@@ -847,7 +851,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       } as any
     );
   }
-  async getPortalUserData(userId: number, semestre?: string): Promise<any> {
+  async getPortalUserData(userId: number, semestre?: number): Promise<any> {
     const result = await this.dataSource.query(
       `
     SELECT
@@ -892,33 +896,32 @@ FROM FK2_MCA_TB_UTILIZADOR u
       CASE
         WHEN p.Codigo IS NULL                          THEN 'SEM_PRE_INSCRICAO'
         WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL THEN 'ADMITIDO_SEM_MATRICULA'
-        WHEN m.Codigo IS NOT NULL  AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'DIPLOMADO'                     THEN 'ALUNO_MATRICULADO'
+        WHEN m.Codigo IS NOT NULL  AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'DIPLOMADO' AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'TRANSFERIDO'                    THEN 'ALUNO_MATRICULADO'
         WHEN TRIM(UPPER(m.ESTADO_MATRICULA)) = 'DIPLOMADO' THEN 'DIPLOMADO'
         ELSE                                                'PREINSCRITO'
       END AS estado_aluno,
 
-      (
-        SELECT NVL(JSON_ARRAYAGG(j), '[]')
-        FROM (
-          SELECT JSON_OBJECT(
-                   'codigo'           VALUE conf2.Codigo,
-                   'codigo_matricula' VALUE conf2.Codigo_Matricula,
-                   'ano_lectivo'      VALUE conf2.Codigo_Ano_lectivo,
-                   'estado'           VALUE conf2.Estado,
-                   'classe'           VALUE conf2.Classe,
-                   'cadeirante'       VALUE conf2.Cadeirante,
-                   'canal'            VALUE conf2.canal
-                 ) AS j
-          FROM fk2_tb_confirmacoes conf2
-          WHERE conf2.Codigo_Matricula = m.Codigo
-            AND conf2.Classe IS NOT NULL
-            AND (:semestre1 IS NULL OR conf2.semestre = :semestre2)
-              -- So traz se estiver ativo 
-          --  AND conf2.ESTADO = 1
-          ORDER BY conf2.Codigo_Ano_lectivo DESC, conf2.Classe DESC
-          FETCH FIRST 1 ROWS ONLY
-        )
-      ) AS confirmacoes
+(
+  SELECT NVL(JSON_ARRAYAGG(j), '[]')
+  FROM (
+    SELECT JSON_OBJECT(
+             'codigo'           VALUE conf2.Codigo,
+             'codigo_matricula' VALUE conf2.Codigo_Matricula,
+             'ano_lectivo'      VALUE conf2.Codigo_Ano_lectivo,
+             'estado'           VALUE conf2.Estado,
+             'classe'           VALUE conf2.Classe,
+             'cadeirante'       VALUE conf2.Cadeirante,
+             'canal'            VALUE conf2.canal,
+             'semestre'         VALUE conf2.semestre
+           ) AS j
+    FROM fk2_tb_confirmacoes conf2
+    WHERE conf2.Codigo_Matricula = m.Codigo
+      AND conf2.Classe IS NOT NULL
+      AND (:semestre1 IS NULL OR conf2.semestre = :semestre2)
+    ORDER BY conf2.Codigo DESC, conf2.Codigo_Ano_lectivo DESC, conf2.Semestre DESC
+    FETCH FIRST 1 ROWS ONLY
+  )
+) AS confirmacoes
 
     FROM fk2_users us
 
@@ -943,23 +946,24 @@ FROM FK2_MCA_TB_UTILIZADOR u
         ) WHERE rn = 1
       ) m ON m.Codigo_Aluno = a.codigo
 
-      LEFT JOIN (
-        SELECT * FROM (
-          SELECT conf.*,
-                 ROW_NUMBER() OVER (
-                   PARTITION BY conf.Codigo_Matricula
-                   ORDER BY
-                     CASE WHEN conf.semestre = :semestre3 THEN 0 ELSE 1 END ASC,
-                     conf.Codigo_Ano_lectivo DESC,
-                     conf.Classe DESC
-                 ) AS rn
-          FROM fk2_tb_confirmacoes conf
-          WHERE conf.Classe IS NOT NULL
-            AND (conf.semestre = :semestre4 OR conf.semestre IS NULL)
-            -- So traz se estiver ativo 
-          --  AND conf.ESTADO = 1
-        ) WHERE rn = 1
-      ) conf ON conf.Codigo_Matricula = m.Codigo
+LEFT JOIN (
+  SELECT * FROM (
+    SELECT conf.*,
+           ROW_NUMBER() OVER (
+             PARTITION BY conf.Codigo_Matricula
+             ORDER BY
+               CASE WHEN conf.semestre = :semestre3 THEN 0 ELSE 1 END ASC,
+               conf.Codigo DESC,
+               conf.Codigo_Ano_lectivo DESC,
+               conf.Semestre DESC
+           ) AS rn
+    FROM fk2_tb_confirmacoes conf 
+    WHERE conf.Classe IS NOT NULL
+      AND (conf.semestre = :semestre4 OR conf.semestre IS NULL)
+      -- So traz se estiver ativo 
+    --  AND conf.ESTADO = 1
+  ) WHERE rn = 1
+) conf ON conf.Codigo_Matricula = m.Codigo
 
       LEFT JOIN fk2_tb_cursos         c     ON c.Codigo     = m.Codigo_Curso
       LEFT JOIN fk2_tb_cursos         cr    ON cr.Codigo    = p.Curso_Candidatura

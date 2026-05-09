@@ -4,14 +4,18 @@ import { AuthController } from './auth.controller';
 import { HashService } from 'src/app.service';
 import { UserSignInService } from './users.signIn.service';
 import { HttpModule } from '@nestjs/axios';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AcademicYear } from 'src/util/entities/academic.year.entity';
+import { AnoLectivoUtil } from 'src/util/current-academic-year';
 
 @Module({
-  imports:[HttpModule.register({
+  imports: [TypeOrmModule.forFeature([AcademicYear]),
+  HttpModule.register({
     timeout: 5000,
     maxRedirects: 5
   })],
   controllers: [AuthController],
-  providers: [AuthService,HashService,UserSignInService],
-  
+  providers: [AuthService, HashService, UserSignInService, AnoLectivoUtil],
+
 })
-export class AuthModule {}
+export class AuthModule { }
