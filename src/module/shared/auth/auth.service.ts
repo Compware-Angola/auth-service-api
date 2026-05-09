@@ -892,7 +892,8 @@ FROM FK2_MCA_TB_UTILIZADOR u
       CASE
         WHEN p.Codigo IS NULL                          THEN 'SEM_PRE_INSCRICAO'
         WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL THEN 'ADMITIDO_SEM_MATRICULA'
-        WHEN m.Codigo IS NOT NULL                      THEN 'ALUNO_MATRICULADO'
+        WHEN m.Codigo IS NOT NULL  AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'DIPLOMADO'                     THEN 'ALUNO_MATRICULADO'
+        WHEN TRIM(UPPER(m.ESTADO_MATRICULA)) = 'DIPLOMADO' THEN 'DIPLOMADO'
         ELSE                                                'PREINSCRITO'
       END AS estado_aluno,
 
@@ -913,7 +914,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
             AND conf2.Classe IS NOT NULL
             AND (:semestre1 IS NULL OR conf2.semestre = :semestre2)
               -- So traz se estiver ativo 
-            AND conf2.ESTADO = 1
+          --  AND conf2.ESTADO = 1
           ORDER BY conf2.Codigo_Ano_lectivo DESC, conf2.Classe DESC
           FETCH FIRST 1 ROWS ONLY
         )
@@ -956,7 +957,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
           WHERE conf.Classe IS NOT NULL
             AND (conf.semestre = :semestre4 OR conf.semestre IS NULL)
             -- So traz se estiver ativo 
-            AND conf.ESTADO = 1
+          --  AND conf.ESTADO = 1
         ) WHERE rn = 1
       ) conf ON conf.Codigo_Matricula = m.Codigo
 
