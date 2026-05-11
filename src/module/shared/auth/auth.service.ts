@@ -51,11 +51,7 @@ export class AuthService {
         roles = await this.checkUserRoles(username);
         permissions = await this.getUserPermissionsByUsernameGA(username);
 
-        await this.userSignInService.registrarOuAtualizarAcesso(
-          user.pk_utilizador,
-          ip,
-          true,
-        );
+
         break;
 
       /* ===================== PORTAL ===================== */
@@ -96,7 +92,13 @@ export class AuthService {
     if (!verificarHash) {
       throw new BadRequestException('Erro ao acessar a Conta');
     }
-
+    if (platform === AuthPlatform.GA) {
+      await this.userSignInService.registrarOuAtualizarAcesso(
+        user.pk_utilizador,
+        ip,
+        true,
+      );
+    }
     /* 🎫 Payload por plataforma */
     const payload =
       platform === AuthPlatform.PORTAL
