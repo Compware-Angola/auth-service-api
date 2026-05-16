@@ -575,7 +575,7 @@ WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
   async checkUserRoles(username: string): Promise<UserRoles> {
     const roles: UserRoles = {
       [UserRole.DOCENTE]: false,
-      [UserRole.DIREITOR_CURSO]: false,
+
       [UserRole.REITOR]: false,
       [UserRole.FACULDADES]: false,
       [UserRole.VICE_REITOR]: false,

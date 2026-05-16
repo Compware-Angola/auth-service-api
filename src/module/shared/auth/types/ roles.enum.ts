@@ -1,6 +1,5 @@
 export enum UserRole {
   DOCENTE = 'docente',
-  DIREITOR_CURSO = 'direitor_curso',
   REITOR = 'Reitor',
   FACULDADES = 'Faculdades',
   VICE_REITOR = 'Vice_Reitor',
@@ -15,7 +14,6 @@ export enum UserRole {
 
 export interface UserRoles {
   [UserRole.DOCENTE]: boolean;
-  [UserRole.DIREITOR_CURSO]: boolean;
   [UserRole.REITOR]: boolean;
   [UserRole.FACULDADES]: boolean;
   [UserRole.VICE_REITOR]: boolean;
