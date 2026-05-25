@@ -254,9 +254,10 @@ export class AuthService {
 
       /* ===================== PORTAL ===================== */
       case AuthPlatform.PORTAL:
-        const semestre = await this.anoLectivoUtil.getSemestreAtual();
-        const semestreAtual = semestre.semestre ?? 1;
-        user = await this.getPortalUserData(userPayload.sub, semestreAtual);
+        //TODO:METER PARA TRAZER POR SEMESTRE
+        //  const semestre = await this.anoLectivoUtil.getSemestreAtual();
+        //  const semestreAtual = semestre.semestre ?? 1;
+        user = await this.getPortalUserData(userPayload.sub);
         isAuthenticated = true;
         break;
 
