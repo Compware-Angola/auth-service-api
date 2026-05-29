@@ -16,11 +16,14 @@ import { UserSignInService } from './users.signIn.service';
 import { UserRole, UserRoles } from './types/ roles.enum';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
-
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 
 @Injectable()
 export class AuthService {
+  @InjectQueue('operator_box')
+  private readonly operator_boxQueue: Queue;
   constructor(private readonly dataSource: DataSource,
     private hashService: HashService,
     private readonly jwtService: JwtService,
@@ -193,6 +196,7 @@ export class AuthService {
       case AuthPlatform.GA:
 
         await this.userSignInService.makloggedOut(utilizadorId)
+        await this.queueOperatorBox(utilizadorId)
 
         break;
 
@@ -313,6 +317,7 @@ export class AuthService {
   }
   async makloggedOut(makloggedOutDto: MakloggedOutDto, codigoutilizador: number) {
     await this.userSignInService.makloggedOut(codigoutilizador)
+
     return {
       message: 'Logout efetuado com sucesso',
     };
@@ -1005,5 +1010,29 @@ LEFT JOIN (
       subject: subject,
       html: htmlContent,
     });
+  }
+
+
+  async queueOperatorBox(
+    codigoUtilizador: number,
+
+  ): Promise<{ message: string; taskId: string | undefined }> {
+    const job = await this.operator_boxQueue.add(
+      'processOperatorBox',
+      {
+        codigoUtilizador
+
+      },
+      {
+        removeOnComplete: true,
+        removeOnFail: false,
+        attempts: 3,
+        backoff: 5000,
+      },
+    );
+    return {
+      message: 'Processamento iniciado: Operador de Caixa ...',
+      taskId: job.id,
+    };
   }
 }

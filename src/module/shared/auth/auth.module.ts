@@ -7,13 +7,19 @@ import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AcademicYear } from 'src/util/entities/academic.year.entity';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
+import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [TypeOrmModule.forFeature([AcademicYear]),
   HttpModule.register({
     timeout: 5000,
     maxRedirects: 5
-  })],
+  }),
+  BullModule.registerQueue({
+    name: 'operator_box',
+  }),
+
+  ],
   controllers: [AuthController],
   providers: [AuthService, HashService, UserSignInService, AnoLectivoUtil],
 

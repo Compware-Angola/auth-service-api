@@ -27,8 +27,8 @@ export class AuthController {
     const login = await this.authService.signIn(signInDto, ip);
 
     if (signInDto.platform == AuthPlatform.GA) {
-     
-      
+
+
       AccessLogHelper.logAccess(this.httpService, {
         descricao: `Utilizador ${login?.user?.nome} fez login com sucesso`,
         fkUtilizadorResponsavel: login.user.pk_utilizador,
@@ -89,15 +89,13 @@ export class AuthController {
   @Post('logout')
   async logout(@Req() req: any, @Body() logoutDTO: LogoutDto) {
     const user = req.user;
-     await this.authService.logout(
+    await this.authService.logout(
       logoutDTO,
       user.sub
     );
 
-        if (logoutDTO.platform == AuthPlatform.GA) {
-     
-      
-     await AccessLogHelper.logAccess(this.httpService, {
+    if (logoutDTO.platform == AuthPlatform.GA) {
+      await AccessLogHelper.logAccess(this.httpService, {
         descricao: `Utilizador ${user?.nome} Terminou Sessão`,
         fkUtilizadorResponsavel: user.sub,
         fkOperacaoLog: 7,

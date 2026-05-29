@@ -12,6 +12,7 @@ import { UserSignInService } from './module/shared/auth/users.signIn.service';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.guard';
+import { BullConfigModule } from './module/shared/bull/bull.module';
 
 @Module({
   imports: [
@@ -86,6 +87,7 @@ import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.gua
     }),
     AuthModule,
     StudetsModule,
+    BullConfigModule
   ],
   controllers: [HashController],
   providers: [
