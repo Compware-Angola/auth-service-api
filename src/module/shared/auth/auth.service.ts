@@ -1,7 +1,18 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 
 import { DataSource } from 'typeorm';
-import { AuthPlatform, LogoutDto, MakloggedOutDto, SignInDto } from './dto/signIn.dto';
+import {
+  AuthPlatform,
+  LogoutDto,
+  MakloggedOutDto,
+  SignInDto,
+} from './dto/signIn.dto';
 import { signUpDto } from './dto/signUp.dto';
 import { HashService } from 'src/app.service';
 import { JwtService } from '@nestjs/jwt';
@@ -19,18 +30,18 @@ import { AnoLectivoUtil } from 'src/util/current-academic-year';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
-
 @Injectable()
 export class AuthService {
   @InjectQueue('operator_box')
   private readonly operator_boxQueue: Queue;
-  constructor(private readonly dataSource: DataSource,
+  constructor(
+    private readonly dataSource: DataSource,
     private hashService: HashService,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
-    private readonly anoLectivoUtil: AnoLectivoUtil
-  ) { }
+    private readonly anoLectivoUtil: AnoLectivoUtil,
+  ) {}
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -39,21 +50,21 @@ export class AuthService {
     let groups: any;
     let permissions: any = null;
 
-
     switch (platform) {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(username);
         if (user?.active_state !== 1) {
-          throw new ForbiddenException('A sua conta está inativa. Contacte o administrador do sistema.');
+          throw new ForbiddenException(
+            'A sua conta está inativa. Contacte o administrador do sistema.',
+          );
         }
-        groups = await this.findGroupsByUserGA(username)
+        groups = await this.findGroupsByUserGA(username);
 
         if (!user) break;
 
         roles = await this.checkUserRoles(username);
         permissions = await this.getUserPermissionsByUsernameGA(username);
-
 
         break;
 
@@ -73,7 +84,6 @@ export class AuthService {
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
-
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
@@ -106,20 +116,20 @@ export class AuthService {
     const payload =
       platform === AuthPlatform.PORTAL
         ? {
-          username: user.username,
-          sub: user.id,
-          email: user.email,
-          codigoPreinscricao: user.codigo_preinscricao,
-          platform,
-        }
+            username: user.username,
+            sub: user.id,
+            email: user.email,
+            codigoPreinscricao: user.codigo_preinscricao,
+            platform,
+          }
         : {
-          username: user.username,
-          nome: user.nome,
-          sub: user.pk_utilizador,
-          permissions,
-          roles,
-          platform,
-        };
+            username: user.username,
+            nome: user.nome,
+            sub: user.pk_utilizador,
+            permissions,
+            roles,
+            platform,
+          };
 
     const token = this.jwtService.sign(payload);
 
@@ -129,10 +139,14 @@ export class AuthService {
 
       user: { ...user, password: undefined },
       ...(platform === AuthPlatform.GA && { roles, groups, permissions }),
-      mensagem: 'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
+      mensagem:
+        'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
   }
-  async UserupdatePassword(dto: UserUpdatePasswordDto, usuarioLogadoId: number): Promise<{ message: string }> {
+  async UserupdatePassword(
+    dto: UserUpdatePasswordDto,
+    usuarioLogadoId: number,
+  ): Promise<{ message: string }> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -140,17 +154,20 @@ export class AuthService {
     try {
       //
       if (dto.novaSenha !== dto.confirmarNovaSenha) {
-        throw new BadRequestException('A nova senha e a confirmação não coincidem');
+        throw new BadRequestException(
+          'A nova senha e a confirmação não coincidem',
+        );
       }
 
       if (dto.senhaAtual === dto.novaSenha) {
-        throw new BadRequestException('A nova senha não pode ser igual à senha antiga');
+        throw new BadRequestException(
+          'A nova senha não pode ser igual à senha antiga',
+        );
       }
       // Verifica se o utilizador existe
       const [user] = await queryRunner.manager.query(
-        `SELECT PASSWORD FROM FK2_MCA_TB_UTILIZADOR WHERE PK_UTILIZADOR = ${usuarioLogadoId} AND ROWNUM = 1`
+        `SELECT PASSWORD FROM FK2_MCA_TB_UTILIZADOR WHERE PK_UTILIZADOR = ${usuarioLogadoId} AND ROWNUM = 1`,
       );
-
 
       if (!user) {
         throw new NotFoundException('Utilizador não encontrado');
@@ -164,8 +181,9 @@ export class AuthService {
       }
 
       // Opção 1: bcrypt local
-      const hashedPassword: string = await this.hashService.criarHash(dto.novaSenha);
-
+      const hashedPassword: string = await this.hashService.criarHash(
+        dto.novaSenha,
+      );
 
       await queryRunner.manager.query(`
       UPDATE FK2_MCA_TB_UTILIZADOR
@@ -188,15 +206,12 @@ export class AuthService {
     }
   }
 
-
-
   async logout(logoutDto: LogoutDto, utilizadorId: number) {
-    const { platform } = logoutDto
+    const { platform } = logoutDto;
     switch (platform) {
       case AuthPlatform.GA:
-
-        await this.userSignInService.makloggedOut(utilizadorId)
-        await this.queueOperatorBox(utilizadorId)
+        await this.userSignInService.makloggedOut(utilizadorId);
+        await this.queueOperatorBox(utilizadorId);
 
         break;
 
@@ -234,15 +249,15 @@ export class AuthService {
       case AuthPlatform.GA:
         user = await this.findUserByusernameGA(userPayload.username);
         roles = await this.checkUserRoles(userPayload.username);
-        groups = await this.findGroupsByUserGA(userPayload.username)
-        permissions = await this.getUserPermissionsByUsernameGA(userPayload.username);
+        groups = await this.findGroupsByUserGA(userPayload.username);
+        permissions = await this.getUserPermissionsByUsernameGA(
+          userPayload.username,
+        );
 
         if (!user) break;
 
         if (user.active_state !== 1) {
-          throw new UnauthorizedException(
-            'Usuário inativo na plataforma GA',
-          );
+          throw new UnauthorizedException('Usuário inativo na plataforma GA');
         }
 
         isAuthenticated = await this.userSignInService.statusLogged(
@@ -277,9 +292,7 @@ export class AuthService {
 
     return {
       isAuthenticated,
-      user: user
-        ? { ...user, password: undefined }
-        : null,
+      user: user ? { ...user, password: undefined } : null,
       ...(platform === AuthPlatform.GA && {
         roles,
         groups,
@@ -287,12 +300,9 @@ export class AuthService {
       }),
       message: 'Current user fetched successfully.',
     };
-
   }
 
-
   async checkEmailExists(chechEmailExists: CheckEmailExistsDto): Promise<any> {
-
     const { email, platform } = chechEmailExists;
     switch (platform) {
       case AuthPlatform.GA:
@@ -308,15 +318,17 @@ export class AuthService {
           return { email, exists: false };
         }
 
-
         return { email, exists: true };
 
       default:
         throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
   }
-  async makloggedOut(makloggedOutDto: MakloggedOutDto, codigoutilizador: number) {
-    await this.userSignInService.makloggedOut(codigoutilizador)
+  async makloggedOut(
+    makloggedOutDto: MakloggedOutDto,
+    codigoutilizador: number,
+  ) {
+    await this.userSignInService.makloggedOut(codigoutilizador);
 
     return {
       message: 'Logout efetuado com sucesso',
@@ -332,7 +344,7 @@ export class AuthService {
 
     let user: any; // Ajuste o tipo conforme tua entity (UserGA | UserPortal | etc)
     let resetUrlBase: string;
-    let userId: number
+    let userId: number;
 
     switch (platform) {
       case AuthPlatform.GA:
@@ -368,18 +380,20 @@ export class AuthService {
     const resetToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     // Construção do link
-    const resetPath = platform === AuthPlatform.GA
-      ? '/auth/primeiro-acesso/redefinir'   // ou o path que usas no frontend GA
-      : '/auth/renovar-senha';
+    const resetPath =
+      platform === AuthPlatform.GA
+        ? '/auth/primeiro-acesso/redefinir' // ou o path que usas no frontend GA
+        : '/auth/renovar-senha';
 
     const resetLink = `${resetUrlBase}${resetPath}/${resetToken}`;
 
     console.log(`[Reset Link - ${platform}]`, resetLink); // para debug
 
     // Envio de email (podes parametrizar o assunto e template por plataforma se quiseres)
-    const subject = platform === AuthPlatform.GA
-      ? 'Configuração Inicial de Senha - Portal Académico GA'
-      : 'Redefinição de Senha - Portal Académico';
+    const subject =
+      platform === AuthPlatform.GA
+        ? 'Configuração Inicial de Senha - Portal Académico GA'
+        : 'Redefinição de Senha - Portal Académico';
 
     const html = `
     <p>Olá,</p>
@@ -396,7 +410,9 @@ export class AuthService {
       message: `Email de ${platform === AuthPlatform.GA ? 'configuração' : 'redefinição'} de senha enviado com sucesso.`,
     };
   }
-  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ message: string }> {
     const { token, newPassword, platform } = resetPasswordDto;
 
     // 1. Validar plataforma logo no início
@@ -405,7 +421,11 @@ export class AuthService {
     }
 
     // 2. Verificar e decodificar o token JWT
-    let payload: { sub: number | string; email: string; platform?: AuthPlatform };
+    let payload: {
+      sub: number | string;
+      email: string;
+      platform?: AuthPlatform;
+    };
     try {
       payload = this.jwtService.verify(token);
     } catch (error) {
@@ -414,7 +434,9 @@ export class AuthService {
 
     // 3. Verificar se o token é da plataforma correta (segurança extra)
     if (payload.platform && payload.platform !== platform) {
-      throw new BadRequestException('Token não corresponde à plataforma informada.');
+      throw new BadRequestException(
+        'Token não corresponde à plataforma informada.',
+      );
     }
 
     let userId: any;
@@ -439,7 +461,8 @@ export class AuthService {
         // Atualiza a senha (já faz hash de   ntro do método, presumo)
         await this.updatePasswordGA(userId, hashedPassword);
 
-        message = 'Senha configurada com sucesso no GA. Pode agora fazer login.';
+        message =
+          'Senha configurada com sucesso no GA. Pode agora fazer login.';
         break;
       }
 
@@ -466,9 +489,9 @@ export class AuthService {
     return { message };
   }
 
-
   async findUserByusernameGA(username: string): Promise<any> {
-    const result = await this.dataSource.query(`SELECT
+    const result = await this.dataSource.query(
+      `SELECT
     u.CODIGO_IMPORTADO,
     u.NOME,
     u.USERNAME,
@@ -491,15 +514,16 @@ export class AuthService {
     u.NUMEROMAXIMOTENTATIVAS,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
-WHERE u.USERNAME= :username`, [username]);
+WHERE u.USERNAME= :username`,
+      [username],
+    );
 
     return await toLowerCaseKeys(result[0]);
-
   }
-
 
   async findUserByIdGA(codigo: number): Promise<any> {
-    const result = await this.dataSource.query(`SELECT
+    const result = await this.dataSource.query(
+      `SELECT
     u.CODIGO_IMPORTADO,
     u.NOME,
     u.USERNAME,
@@ -522,14 +546,13 @@ WHERE u.USERNAME= :username`, [username]);
     u.NUMEROMAXIMOTENTATIVAS,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
-WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
+WHERE u.PK_UTILIZADOR= :codigo`,
+      [codigo],
+    );
 
     return await toLowerCaseKeys(result[0]);
-
   }
-  async findUserByUsernameEmailOrDocumentoPORTAL(
-    value: string,
-  ): Promise<any> {
+  async findUserByUsernameEmailOrDocumentoPORTAL(value: string): Promise<any> {
     const result = await this.dataSource.query(
       `
     SELECT
@@ -661,7 +684,8 @@ WHERE u.PK_UTILIZADOR= :codigo`, [codigo]);
     return roles;
   }
   async findGroupsByUserGA(username: string): Promise<any[]> {
-    const result = await this.dataSource.query(`SELECT
+    const result = await this.dataSource.query(
+      `SELECT
     g.PK_GRUPO AS codigo,
     g.DESIGNACAO AS designation,
     g.SIGLA AS sigla,
@@ -673,12 +697,15 @@ JOIN FK2_MCA_TB_UTILIZADOR u ON gu.FK_UTILIZADOR = u.PK_UTILIZADOR
 JOIN FK2_MCA_TB_TIPO_DE_GRUPO tg ON g.FK_TIPO_DE_GRUPO = tg.PK_TIPO_DE_GRUPO
 WHERE u.USERNAME = :username
   AND gu.ACTIVE_STATE = 1
-  AND g.ACTIVE_STATE = 1`, [username]);
+  AND g.ACTIVE_STATE = 1`,
+      [username],
+    );
 
     return toLowerCaseKeys(result);
   }
   async getUserPermissionsByUsernameGA(username: string): Promise<any[]> {
-    const result = await this.dataSource.query(`
+    const result = await this.dataSource.query(
+      `
       SELECT DISTINCT a.sigla
     FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
     JOIN FK2_MCA_TB_GRUPO g ON gu.FK_GRUPO = g.PK_GRUPO
@@ -695,12 +722,15 @@ WHERE u.USERNAME = :username
         WHERE r.fk_acesso = a.pk_acesso
           AND r.fk_grupo = g.pk_grupo
             AND r.fk_acesso = a.pk_acesso and r.ACTIVE_STATE = 1
-      )`, [username]);
+      )`,
+      [username],
+    );
 
     return result.map((row: any) => row.SIGLA);
   }
   async checkEmailExistsGA(email: string): Promise<any> {
-    const result = await this.dataSource.query(`SELECT
+    const result = await this.dataSource.query(
+      `SELECT
     u.CODIGO_IMPORTADO,
     u.NOME,
     u.USERNAME,
@@ -720,7 +750,9 @@ WHERE u.USERNAME = :username
     u.NUMEROMAXIMOTENTATIVAS,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
- WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))`, [email.trim()]);
+ WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))`,
+      [email.trim()],
+    );
 
     return await toLowerCaseKeys(result[0]);
   }
@@ -731,7 +763,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
     FROM FK2_USERS u
     WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))
     `,
-      [email.trim()]
+      [email.trim()],
     );
 
     return toLowerCaseKeys(result[0]);
@@ -741,7 +773,8 @@ FROM FK2_MCA_TB_UTILIZADOR u
     const { email, enrrolment, phone, details, platform } = peloadData;
     switch (platform) {
       case AuthPlatform.PORTAL:
-        const subject = '[Portal UMA] Solicitação de Atualização de Dados Cadastrais';
+        const subject =
+          '[Portal UMA] Solicitação de Atualização de Dados Cadastrais';
 
         const htmlContent = `
 <!DOCTYPE html>
@@ -829,25 +862,40 @@ FROM FK2_MCA_TB_UTILIZADOR u
         console.log(adminEmail);
 
         if (!adminEmail) {
-          throw new BadRequestException('E-mail do administrador não configurado.');
+          throw new BadRequestException(
+            'E-mail do administrador não configurado.',
+          );
         }
         await this.sendEmail(adminEmail, subject, htmlContent, email);
-        return { message: 'Solicitação de renovação de dados enviada com sucesso.' };
+        return {
+          message: 'Solicitação de renovação de dados enviada com sucesso.',
+        };
       case AuthPlatform.GA:
-        throw new BadRequestException('Solicitação de renovação de dados ainda não suportada para GA.');
+        throw new BadRequestException(
+          'Solicitação de renovação de dados ainda não suportada para GA.',
+        );
         break;
       default:
-        throw new BadRequestException('Plataforma inválida. Use PORTAL para solicitar renovação de dados.');
+        throw new BadRequestException(
+          'Plataforma inválida. Use PORTAL para solicitar renovação de dados.',
+        );
     }
-
-
   }
-  async updatePasswordPortal(codigo: number, hashedPassword: string): Promise<void> {
-    await this.dataSource.query(`UPDATE FK2_USERS
+  async updatePasswordPortal(
+    codigo: number,
+    hashedPassword: string,
+  ): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword
-    WHERE ID = :codigo`, [hashedPassword, codigo]);
+    WHERE ID = :codigo`,
+      [hashedPassword, codigo],
+    );
   }
-  async updatePasswordGA(codigo: number, hashedPassword: string): Promise<void> {
+  async updatePasswordGA(
+    codigo: number,
+    hashedPassword: string,
+  ): Promise<void> {
     await this.dataSource.query(
       `UPDATE FK2_MCA_TB_UTILIZADOR
      SET PASSWORD = :hashedPassword,
@@ -856,7 +904,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       {
         hashedPassword,
         codigo,
-      } as any
+      } as any,
     );
   }
   async getPortalUserData(userId: number, semestre?: number): Promise<any> {
@@ -983,7 +1031,13 @@ LEFT JOIN (
 
     WHERE us.id = :userId
     `,
-      { semestre1: semestre, semestre2: semestre, semestre3: semestre, semestre4: semestre, userId } as any,
+      {
+        semestre1: semestre,
+        semestre2: semestre,
+        semestre3: semestre,
+        semestre4: semestre,
+        userId,
+      } as any,
     );
 
     if (!result || result.length === 0) {
@@ -1002,7 +1056,12 @@ LEFT JOIN (
 
     return row;
   }
-  async sendEmail(to: string, subject: string, htmlContent: string, from?: string) {
+  async sendEmail(
+    to: string,
+    subject: string,
+    htmlContent: string,
+    from?: string,
+  ) {
     await this.mailerService.sendMail({
       to: to,
       // from: from ? undefined : process.env.MAIL_USER,
@@ -1012,16 +1071,13 @@ LEFT JOIN (
     });
   }
 
-
   async queueOperatorBox(
     codigoUtilizador: number,
-
   ): Promise<{ message: string; taskId: string | undefined }> {
     const job = await this.operator_boxQueue.add(
       'processOperatorBox',
       {
-        codigoUtilizador
-
+        codigoUtilizador,
       },
       {
         removeOnComplete: true,
