@@ -355,6 +355,8 @@ export class AuthService {
 
       case AuthPlatform.PORTAL:
         user = await this.checkEmailExistsPortal(email);
+        console.log("user no portal: ", user);
+
         resetUrlBase = process.env.URL_PORTAL || 'http://localhost:3001';
         userId = user.id;
         break;
