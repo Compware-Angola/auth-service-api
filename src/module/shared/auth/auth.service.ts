@@ -41,7 +41,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) {}
+  ) { }
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -116,20 +116,20 @@ export class AuthService {
     const payload =
       platform === AuthPlatform.PORTAL
         ? {
-            username: user.username,
-            sub: user.id,
-            email: user.email,
-            codigoPreinscricao: user.codigo_preinscricao,
-            platform,
-          }
+          username: user.username,
+          sub: user.id,
+          email: user.email,
+          codigoPreinscricao: user.codigo_preinscricao,
+          platform,
+        }
         : {
-            username: user.username,
-            nome: user.nome,
-            sub: user.pk_utilizador,
-            permissions,
-            roles,
-            platform,
-          };
+          username: user.username,
+          nome: user.nome,
+          sub: user.pk_utilizador,
+          permissions,
+          roles,
+          platform,
+        };
 
     const token = this.jwtService.sign(payload);
 
@@ -577,7 +577,8 @@ WHERE u.PK_UTILIZADOR= :codigo`,
       u.ANO_LECTIVO_ID,
       u.ID,
       p.CODIGO AS codigoPreinscricao,
-      p.NOME_COMPLETO AS nomeCompleto
+      p.NOME_COMPLETO AS nomeCompleto,
+      u.PASSWORD_RESET_REQUIRED
     FROM FK2_USERS u
     LEFT JOIN FK2_TB_PREINSCRICAO p ON u.ID = p.USER_ID
     WHERE 
@@ -887,7 +888,8 @@ FROM FK2_MCA_TB_UTILIZADOR u
   ): Promise<void> {
     await this.dataSource.query(
       `UPDATE FK2_USERS
-    SET PASSWORD = :hashedPassword
+    SET PASSWORD = :hashedPassword,
+        PASSWORD_RESET_REQUIRED = 0
     WHERE ID = :codigo`,
       [hashedPassword, codigo],
     );

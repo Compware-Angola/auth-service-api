@@ -65,7 +65,9 @@ import { BullConfigModule } from './module/shared/bull/bull.module';
         };
       },
     }),
+    // Configuração do Mailer (SMTP)
     MailerModule.forRootAsync({
+      imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         transport: {
@@ -76,12 +78,9 @@ import { BullConfigModule } from './module/shared/bull/bull.module';
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
-          options: {
-            connectionTimeout: 60000,
-          },
         },
         defaults: {
-          from: `"Suporte Uma" <${config.get<string>('MAIL_USER')}>`,
+          from: `"Equipa de Suporte" <${config.get<string>('MAIL_USER')}>`,
         },
       }),
     }),
