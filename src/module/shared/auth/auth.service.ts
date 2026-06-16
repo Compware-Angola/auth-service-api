@@ -917,6 +917,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       us.name                       AS nome_completo,
       us.email                      AS email,
       us.telefone                   AS telefone,
+      us.GRAUACADEMICO               AS grau_academico,
       us.numero_documento           AS numero_documento,
       p.Codigo                      AS codigo_preinscricao,
       p.Nome_Completo,

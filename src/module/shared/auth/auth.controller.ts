@@ -1,7 +1,34 @@
-import { Controller, Post, Body, Get, Param, UseGuards, Req, Query, Put, Patch, HttpCode, HttpStatus, ParseIntPipe } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Param,
+  UseGuards,
+  Req,
+  Query,
+  Put,
+  Patch,
+  HttpCode,
+  HttpStatus,
+  ParseIntPipe,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { AuthPlatform, LogoutDto, MakloggedOutDto, SignInDto } from './dto/signIn.dto';
+import {
+  AuthPlatform,
+  LogoutDto,
+  MakloggedOutDto,
+  SignInDto,
+} from './dto/signIn.dto';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
@@ -15,7 +42,10 @@ import { UserUpdatePasswordDto } from './dto/user-update-password';
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService, private httpService: HttpService) { }
+  constructor(
+    private readonly authService: AuthService,
+    private httpService: HttpService,
+  ) {}
 
   @Post('login')
   @ApiOperation({ summary: 'Login do utilizador' })
@@ -27,23 +57,22 @@ export class AuthController {
     const login = await this.authService.signIn(signInDto, ip);
 
     if (signInDto.platform == AuthPlatform.GA) {
-
-
       AccessLogHelper.logAccess(this.httpService, {
         descricao: `Utilizador ${login?.user?.nome} fez login com sucesso`,
         fkUtilizadorResponsavel: login.user.pk_utilizador,
         fkOperacaoLog: 7,
         ip: req.ip,
       });
-
     }
 
-    return login
+    return login;
   }
   @Get('current-user')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Obtém informações do usuário atual em uma plataforma específica' })
+  @ApiOperation({
+    summary: 'Obtém informações do usuário atual em uma plataforma específica',
+  })
   @ApiQuery({
     name: 'platform',
     enum: AuthPlatform,
@@ -62,7 +91,6 @@ export class AuthController {
     return this.authService.getCurrentUser(userPayload, query);
   }
 
-
   @Put('update-password')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -70,29 +98,29 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Senha atualizada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Erro na atualização da senha.' })
   @ApiBody({ type: UserUpdatePasswordDto })
-  async updatePassword(@Req() req: any, @Body() updatePasswordDto: UserUpdatePasswordDto) {
+  async updatePassword(
+    @Req() req: any,
+    @Body() updatePasswordDto: UserUpdatePasswordDto,
+  ) {
     const userPayload = req.user;
-    return this.authService.UserupdatePassword(updatePasswordDto, userPayload.sub);
+    return this.authService.UserupdatePassword(
+      updatePasswordDto,
+      userPayload.sub,
+    );
   }
   @Get('validate-token')
   @UseGuards(JwtAuthGuard, ActiveUserGuard)
-
   @ApiBearerAuth('JWT-auth')
-  validateToken(
-    @Req() req: any,) {
+  validateToken(@Req() req: any) {
     const userPayload = req.user;
     return { valid: true, user: userPayload };
-
   }
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Post('logout')
   async logout(@Req() req: any, @Body() logoutDTO: LogoutDto) {
     const user = req.user;
-    await this.authService.logout(
-      logoutDTO,
-      user.sub
-    );
+    await this.authService.logout(logoutDTO, user.sub);
 
     if (logoutDTO.platform == AuthPlatform.GA) {
       await AccessLogHelper.logAccess(this.httpService, {
@@ -101,19 +129,22 @@ export class AuthController {
         fkOperacaoLog: 7,
         ip: req.ip,
       });
-
     }
   }
 
   //@UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Patch('mak-logged-out/:utilizadorId')
-  async makloggedOut(@Param('utilizadorId') utilizadorId: number, @Body() query: MakloggedOutDto,) {
-
+  async makloggedOut(
+    @Param('utilizadorId') utilizadorId: number,
+    @Body() query: MakloggedOutDto,
+  ) {
     return await this.authService.makloggedOut(query, utilizadorId);
   }
   @Post('check-email')
-  @ApiOperation({ summary: 'Verifica se o e-mail existe na plataforma especificada' })
+  @ApiOperation({
+    summary: 'Verifica se o e-mail existe na plataforma especificada',
+  })
   @ApiResponse({ status: 200, description: 'E-mail verificado com sucesso.' })
   @ApiResponse({ status: 404, description: 'E-mail não encontrado.' })
   @ApiBody({ type: CheckEmailExistsDto })
@@ -122,15 +153,22 @@ export class AuthController {
   }
   @Post('send-change-password')
   @ApiOperation({ summary: 'Envia um e-mail para redefinição de senha' })
-  @ApiResponse({ status: 200, description: 'E-mail de redefinição de senha enviado com sucesso.' })
+  @ApiResponse({
+    status: 200,
+    description: 'E-mail de redefinição de senha enviado com sucesso.',
+  })
   @ApiResponse({ status: 404, description: 'E-mail não encontrado.' })
   @ApiBody({ type: CheckEmailExistsDto })
-  async sendChangePasswordEmail(@Body() checkEmailExistsDto: CheckEmailExistsDto) {
+  async sendChangePasswordEmail(
+    @Body() checkEmailExistsDto: CheckEmailExistsDto,
+  ) {
     return this.authService.SendchangePassword(checkEmailExistsDto);
   }
 
   @Post('reset-password')
-  @ApiOperation({ summary: 'Redefine a senha do usuário usando o token enviado por e-mail' })
+  @ApiOperation({
+    summary: 'Redefine a senha do usuário usando o token enviado por e-mail',
+  })
   @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
   @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
   @ApiBody({ type: ResetPasswordDto })
@@ -138,13 +176,13 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
   @Post('send-renew-data')
-  @ApiOperation({ summary: 'Envia uma solicitação para renovação de dados cadastrais' })
+  @ApiOperation({
+    summary: 'Envia uma solicitação para renovação de dados cadastrais',
+  })
   @ApiResponse({ status: 200, description: 'Solicitação enviada com sucesso.' })
   @ApiResponse({ status: 400, description: 'Erro ao enviar a solicitação.' })
   @ApiBody({ type: SendRenewDataDto })
   async sendRenewData(@Body() sendRenewDataDto: SendRenewDataDto) {
     return this.authService.sendRenewData(sendRenewDataDto);
   }
-
-
 }
