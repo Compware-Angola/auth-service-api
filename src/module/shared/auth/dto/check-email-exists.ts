@@ -1,6 +1,6 @@
 // src/auth/dto/check-email.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsEnum, IsNotEmpty, IsString, IsOptional } from 'class-validator';
 import { AuthPlatform } from './signIn.dto';
 
 export class CheckEmailExistsDto {
@@ -12,6 +12,17 @@ export class CheckEmailExistsDto {
   @IsEmail({}, { message: 'Por favor, insira um e-mail válido' })
   @IsNotEmpty({ message: 'O e-mail é obrigatório' })
   email: string;
+
+  @ApiProperty({
+    example: 'PORTAL',
+    description: 'Matrícula do estudante ou funcionário',
+    type: String,
+  })
+  @IsString()
+  @IsOptional()
+  matricula?: string;
+
+
   @ApiProperty({
     example: 'PORTAL',
     description: 'Plataforma de autenticação',

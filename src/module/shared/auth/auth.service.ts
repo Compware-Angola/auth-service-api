@@ -335,7 +335,7 @@ export class AuthService {
     };
   }
   async SendchangePassword(dto: CheckEmailExistsDto) {
-    const { email, platform } = dto;
+    const { email, matricula, platform } = dto;
 
     // Validação inicial da plataforma
     if (![AuthPlatform.GA, AuthPlatform.PORTAL].includes(platform)) {
@@ -348,14 +348,34 @@ export class AuthService {
 
     switch (platform) {
       case AuthPlatform.GA:
+        if (!email) {
+          throw new BadRequestException('Email é obrigatório.');
+        }
         user = await this.checkEmailExistsGA(email);
+
+        if (!user) {
+          throw new BadRequestException('Email não encontrado.');
+        }
+
         resetUrlBase = process.env.URL_GA || 'http://localhost:3000';
         userId = user?.pk_utilizador;
         break;
 
       case AuthPlatform.PORTAL:
-        user = await this.checkEmailExistsPortal(email);
-        console.log("user no portal: ", user);
+        if (!email) {
+          throw new BadRequestException('Email é obrigatório.');
+        }
+        if (!matricula) {
+          throw new BadRequestException('Matrícula é obrigatória.');
+        }
+        user = await this.checkEmailExistsPortal(email, matricula);
+        console.log(user, "user");
+
+        if (!user) {
+          throw new BadRequestException('Email ou matrícula não encontrados.');
+        }
+
+
 
         resetUrlBase = process.env.URL_PORTAL || 'http://localhost:3001';
         userId = user.id;
@@ -469,8 +489,9 @@ export class AuthService {
       }
 
       case AuthPlatform.PORTAL: {
-        // Para PORTAL, usamos o email do payload para buscar o utilizador
-        const user = await this.checkEmailExistsPortal(payload.email);
+        // Para PORTAL, Buscar pelo ID
+        console.log("payload: ", payload);
+        const user = await this.findUserByIdPortal(payload.sub as number);
         if (!user) {
           throw new NotFoundException('Utilizador não encontrado no Portal.');
         }
@@ -549,6 +570,20 @@ WHERE u.USERNAME= :username`,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
 WHERE u.PK_UTILIZADOR= :codigo`,
+      [codigo],
+    );
+
+    return await toLowerCaseKeys(result[0]);
+  }
+  async findUserByIdPortal(codigo: number): Promise<any> {
+    const result = await this.dataSource.query(
+      `SELECT 
+  
+    u.EMAIL,
+   
+    u.id
+    FROM FK2_USERS u
+    WHERE u.id = :codigo`,
       [codigo],
     );
 
@@ -759,17 +794,35 @@ FROM FK2_MCA_TB_UTILIZADOR u
 
     return await toLowerCaseKeys(result[0]);
   }
-  async checkEmailExistsPortal(email: string): Promise<any> {
-    const result = await this.dataSource.query(
-      `
-    SELECT *
+  async checkEmailExistsPortal(email: string, matricula?: string): Promise<any> {
+    console.log("email: ", email);
+    console.log("matricula: ", matricula);
+    let query = `
+    SELECT 
+ 
+    u.EMAIL,
+   
+    m.Codigo as matricula,
+    u.id
     FROM FK2_USERS u
+    INNER JOIN fk2_tb_preinscricao p ON p.user_id = u.id
+    INNER JOIN fk2_tb_admissao a ON a.pre_incricao = p.Codigo
+    INNER JOIN fk2_tb_matriculas m ON m.Codigo_aluno = a.codigo
     WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))
-    `,
-      [email.trim()],
-    );
+  `;
 
-    return toLowerCaseKeys(result[0]);
+    const params: any = {
+      email: email.trim(),
+    };
+
+    if (matricula?.trim()) {
+      query += ` AND m.Codigo = :matricula`;
+      params.matricula = matricula.trim();
+    }
+
+    const result = await this.dataSource.query(query, params);
+
+    return await toLowerCaseKeys(result[0]) || null;
   }
 
   async sendRenewData(peloadData: SendRenewDataDto) {
