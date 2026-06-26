@@ -760,7 +760,13 @@ WHERE u.USERNAME = :username
         WHERE r.fk_acesso = a.pk_acesso
           AND r.fk_grupo = g.pk_grupo
             AND r.fk_acesso = a.pk_acesso and r.ACTIVE_STATE = 1
-      )`,
+      )
+      AND NOT EXISTS (SELECT 1
+                      FROM FK2_RESTRICOES_ACESSOS RA
+                      WHERE RA.CODIGO_ACESSO     = A.PK_ACESSO
+                        AND RA.CODIGO_UTILIZADOR = U.PK_UTILIZADOR
+                        AND RA.STATUS            = 1)
+      `,
       [username],
     );
 
