@@ -41,7 +41,7 @@ import { BullConfigModule } from './module/shared/bull/bull.module';
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,
-      signOptions: { expiresIn: '6h' },
+      signOptions: { expiresIn: '12h' },
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

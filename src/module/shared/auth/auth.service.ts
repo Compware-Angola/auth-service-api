@@ -135,7 +135,7 @@ export class AuthService {
 
     return {
       access_token: token,
-      expires_in: 900,
+      expires_in: 21600,
 
       user: { ...user, password: undefined },
       ...(platform === AuthPlatform.GA && { roles, groups, permissions }),
@@ -971,8 +971,8 @@ FROM FK2_MCA_TB_UTILIZADOR u
     );
   }
   async getPortalUserData(userId: number, semestre?: number): Promise<any> {
-   const result = await this.dataSource.query(
-`
+    const result = await this.dataSource.query(
+      `
 SELECT
   us.id                         AS user_id,
   us.name                       AS nome_completo,
@@ -1127,14 +1127,14 @@ LEFT JOIN fk2_polos       polos ON polos.id  = p.polo_id
 
 WHERE us.id = :userId
 `,
-{
-  semestre1: semestre,
-  semestre2: semestre,
-  semestre3: semestre,
-  semestre4: semestre,
-  userId,
-} as any
-);
+      {
+        semestre1: semestre,
+        semestre2: semestre,
+        semestre3: semestre,
+        semestre4: semestre,
+        userId,
+      } as any
+    );
 
     if (!result || result.length === 0) {
       throw new NotFoundException('Utilizador não encontrado');
