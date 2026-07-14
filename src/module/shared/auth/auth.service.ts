@@ -41,7 +41,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) { }
+  ) {}
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -116,20 +116,20 @@ export class AuthService {
     const payload =
       platform === AuthPlatform.PORTAL
         ? {
-          username: user.username,
-          sub: user.id,
-          email: user.email,
-          codigoPreinscricao: user.codigo_preinscricao,
-          platform,
-        }
+            username: user.username,
+            sub: user.id,
+            email: user.email,
+            codigoPreinscricao: user.codigo_preinscricao,
+            platform,
+          }
         : {
-          username: user.username,
-          nome: user.nome,
-          sub: user.pk_utilizador,
-          permissions,
-          roles,
-          platform,
-        };
+            username: user.username,
+            nome: user.nome,
+            sub: user.pk_utilizador,
+            permissions,
+            roles,
+            platform,
+          };
 
     const token = this.jwtService.sign(payload);
 
@@ -369,13 +369,11 @@ export class AuthService {
           throw new BadRequestException('Matrícula é obrigatória.');
         }
         user = await this.checkEmailExistsPortal(email, matricula);
-        console.log(user, "user");
+        console.log(user, 'user');
 
         if (!user) {
           throw new BadRequestException('Email ou matrícula não encontrados.');
         }
-
-
 
         resetUrlBase = process.env.URL_PORTAL || 'http://localhost:3001';
         userId = user.id;
@@ -490,7 +488,7 @@ export class AuthService {
 
       case AuthPlatform.PORTAL: {
         // Para PORTAL, Buscar pelo ID
-        console.log("payload: ", payload);
+        console.log('payload: ', payload);
         const user = await this.findUserByIdPortal(payload.sub as number);
         if (!user) {
           throw new NotFoundException('Utilizador não encontrado no Portal.');
@@ -800,9 +798,12 @@ FROM FK2_MCA_TB_UTILIZADOR u
 
     return await toLowerCaseKeys(result[0]);
   }
-  async checkEmailExistsPortal(email: string, matricula?: string): Promise<any> {
-    console.log("email: ", email);
-    console.log("matricula: ", matricula);
+  async checkEmailExistsPortal(
+    email: string,
+    matricula?: string,
+  ): Promise<any> {
+    console.log('email: ', email);
+    console.log('matricula: ', matricula);
     let query = `
     SELECT 
  
@@ -828,7 +829,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
 
     const result = await this.dataSource.query(query, params);
 
-    return await toLowerCaseKeys(result[0]) || null;
+    return (await toLowerCaseKeys(result[0])) || null;
   }
 
   async sendRenewData(peloadData: SendRenewDataDto) {
@@ -971,8 +972,8 @@ FROM FK2_MCA_TB_UTILIZADOR u
     );
   }
   async getPortalUserData(userId: number, semestre?: number): Promise<any> {
-   const result = await this.dataSource.query(
-`
+    const result = await this.dataSource.query(
+      `
 SELECT
   us.id                         AS user_id,
   us.name                       AS nome_completo,
@@ -987,6 +988,7 @@ SELECT
   p.Data_Nascimento,
   p.Email,
   p.Bilhete_Identidade,
+  us.Tipo_de_Documento          AS tipo_documento,
   p.Contactos_Telefonicos,
   p.saldo_reset                 AS saldo_reset,
   p.saldo_reset_anter           AS saldo_reset_anter,
@@ -1127,14 +1129,14 @@ LEFT JOIN fk2_polos       polos ON polos.id  = p.polo_id
 
 WHERE us.id = :userId
 `,
-{
-  semestre1: semestre,
-  semestre2: semestre,
-  semestre3: semestre,
-  semestre4: semestre,
-  userId,
-} as any
-);
+      {
+        semestre1: semestre,
+        semestre2: semestre,
+        semestre3: semestre,
+        semestre4: semestre,
+        userId,
+      } as any,
+    );
 
     if (!result || result.length === 0) {
       throw new NotFoundException('Utilizador não encontrado');
