@@ -135,7 +135,7 @@ export class AuthService {
 
     return {
       access_token: token,
-      expires_in: 900,
+      expires_in: 21600,
 
       user: { ...user, password: undefined },
       ...(platform === AuthPlatform.GA && { roles, groups, permissions }),
@@ -1135,7 +1135,7 @@ WHERE us.id = :userId
         semestre3: semestre,
         semestre4: semestre,
         userId,
-      } as any,
+      } as any
     );
 
     if (!result || result.length === 0) {

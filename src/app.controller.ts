@@ -37,7 +37,7 @@ export class HashController {
   constructor(
     private readonly hashService: HashService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   // 1. Gerar hash (primeira vez, para guardar na BD)
   @Post('hash')
@@ -49,12 +49,12 @@ export class HashController {
 
   // 2. Login REAL: compara com hash da BD → gera JWT
   @Post('login')
-  @ApiOperation({ 
-    summary: 'LOGIN: manda senha + hash da BD → recebe JWT se correto' 
+  @ApiOperation({
+    summary: 'LOGIN: manda senha + hash da BD → recebe JWT se correto'
   })
-  @ApiBody({ 
+  @ApiBody({
     description: 'Hash vem da tua BD, texto é o que o user digitou',
-    type: LoginFromDbDto 
+    type: LoginFromDbDto
   })
   @ApiResponse({ status: 200, type: TokenResponse })
   @ApiResponse({ status: 401, description: 'Senha errada' })
@@ -70,15 +70,15 @@ export class HashController {
 
     return {
       access_token: token,
-      expires_in: 900,
+      expires_in: 21600,
       mensagem: 'Login sucesso! Usa este JWT nas próximas chamadas.',
     };
   }
 
   // 3. Verificar com JWT (sem tocar na BD novamente)
   @Post('verify-jwt')
-  @ApiOperation({ 
-    summary: 'Verificar senha usando apenas JWT (stateless)' 
+  @ApiOperation({
+    summary: 'Verificar senha usando apenas JWT (stateless)'
   })
   @ApiBody({ type: VerifyJwtDto })
   @ApiResponse({ status: 200, type: VerifyResponse })
@@ -94,21 +94,21 @@ export class HashController {
   }
 
   @Post('verify')
-@ApiOperation({
-  summary: 'Verifica se o hash corresponde ao texto fornecido',
-  description: 'Recebe um texto em claro e um hash previamente gerado. Compara-os usando o algoritmo configurado (SHA-256, bcrypt, argon2, etc.) e retorna true/false.',
-})
-   @ApiBody({ type: VerifyOldDto })
-  @ApiResponse({ status: 200})
+  @ApiOperation({
+    summary: 'Verifica se o hash corresponde ao texto fornecido',
+    description: 'Recebe um texto em claro e um hash previamente gerado. Compara-os usando o algoritmo configurado (SHA-256, bcrypt, argon2, etc.) e retorna true/false.',
+  })
+  @ApiBody({ type: VerifyOldDto })
+  @ApiResponse({ status: 200 })
   async verifyOld(@Body() body: VerifyOldDto) {
     const valid = await this.hashService.verificarHash(body.texto, body.hash);
     return { valid };
   }
 
-@Get()
-@ApiOperation({
-  summary: '🏠 Página inicial – Status da API',
-  description: `
+  @Get()
+  @ApiOperation({
+    summary: '🏠 Página inicial – Status da API',
+    description: `
 🔥 **SERVIÇO DE AUTENTICAÇÃO STATELESS PRONTO!**
 
 ### Fluxo completo da API:
@@ -122,33 +122,33 @@ export class HashController {
 
 Tudo pronto para produção! 🚀
   `.trim(),
-})
-@ApiResponse({
-  status: 200,
-  description: 'API online e pronta para uso',
-  schema: {
-    type: 'object',
-    properties: {
-      mensagem: {
-        type: 'string',
-        example: '🔥 SERVIÇO DE AUTENTICAÇÃO STATELESS PRONTO!',
-      },
-      fluxo: {
-        type: 'string',
-        example: '1. /hash → guarda na BD | 2. /login (texto + hash_da_bd) → JWT | 3. /verify-jwt (texto + JWT)',
-      },
-      docs: {
-        type: 'string',
-        example: '/api',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'API online e pronta para uso',
+    schema: {
+      type: 'object',
+      properties: {
+        mensagem: {
+          type: 'string',
+          example: '🔥 SERVIÇO DE AUTENTICAÇÃO STATELESS PRONTO!',
+        },
+        fluxo: {
+          type: 'string',
+          example: '1. /hash → guarda na BD | 2. /login (texto + hash_da_bd) → JWT | 3. /verify-jwt (texto + JWT)',
+        },
+        docs: {
+          type: 'string',
+          example: '/api',
+        },
       },
     },
-  },
-})
-root() {
-  return {
-    mensagem: '🔥 SERVIÇO DE AUTENTICAÇÃO STATELESS PRONTO!',
-    fluxo: '1. /hash → guarda na BD | 2. /login (texto + hash_da_bd) → JWT | 3. /verify-jwt (texto + JWT)',
-    docs: '/api',
-  };
-}
+  })
+  root() {
+    return {
+      mensagem: '🔥 SERVIÇO DE AUTENTICAÇÃO STATELESS PRONTO!',
+      fluxo: '1. /hash → guarda na BD | 2. /login (texto + hash_da_bd) → JWT | 3. /verify-jwt (texto + JWT)',
+      docs: '/api',
+    };
+  }
 }
