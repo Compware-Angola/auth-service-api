@@ -31,4 +31,9 @@ export interface JwtPayload {
    * (ex: tokens de refresh ou de serviços que não usam permissões)
    */
   permissions?: string[];
+
+  /**
+   * Plataforma de autenticação (GA, PORTAL, PEOPLE_MANAGEMENT)
+   */
+  platform?: string;
 }

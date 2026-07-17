@@ -106,6 +106,34 @@ export class UserSignInService {
         return valor === 1 || valor === true || String(valor) === '1';
     }
 
+    /**
+     * Verifica se o utilizador da plataforma PEOPLE_MANAGEMENT está ativo
+     */
+    async isUserActivePeopleManagement(codigo: number | string): Promise<boolean> {
+        const result = await this.dataSource.query(
+            `SELECT ESTADO FROM GP_USUARIOS WHERE CODIGO = :codigo`,
+            [codigo],
+        );
+
+        if (result.length === 0) return false;
+
+        return Number(result[0].ESTADO) === 1;
+    }
+
+    /**
+     * Verifica se o utilizador da plataforma GA está ativo
+     */
+    async isUserActiveGA(codigo: number | string): Promise<boolean> {
+        const result = await this.dataSource.query(
+            `SELECT ACTIVE_STATE FROM FK2_MCA_TB_UTILIZADOR WHERE PK_UTILIZADOR = :codigo`,
+            [codigo],
+        );
+
+        if (result.length === 0) return false;
+
+        return Number(result[0].ACTIVE_STATE) === 1;
+    }
+
 
     /**
      * (Opcional) Limpar sessões antigas / inativas
