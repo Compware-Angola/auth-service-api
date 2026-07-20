@@ -81,16 +81,31 @@ export class AuthService {
         );
         break;
 
+      case AuthPlatform.PEOPLE_MANAGEMENT:
+        user = await this.findUserByEmailPeopleManagement(username);
+
+        if (!user) break;
+
+        break;
+
       default:
-        throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+        throw new BadRequestException(
+          'Plataforma inválida. Use GA, PORTAL ou PEOPLE_MANAGEMENT.',
+        );
     }
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    /* 🔐 Validação de estado apenas para GA */
+    /* 🔐 Validação de estado */
     if (platform === AuthPlatform.GA && user.active_state !== 1) {
+      throw new BadRequestException(
+        'Usuário inativo, contate o administrador do sistema.',
+      );
+    }
+
+    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.estado !== 1) {
       throw new BadRequestException(
         'Usuário inativo, contate o administrador do sistema.',
       );
@@ -113,32 +128,49 @@ export class AuthService {
       );
     }
     /* 🎫 Payload por plataforma */
-    const payload =
-      platform === AuthPlatform.PORTAL
-        ? {
-            username: user.username,
-            sub: user.id,
-            email: user.email,
-            codigoPreinscricao: user.codigo_preinscricao,
-            platform,
-          }
-        : {
-            username: user.username,
-            nome: user.nome,
-            sub: user.pk_utilizador,
-            permissions,
-            roles,
-            platform,
-          };
+    let payload: any;
+    if (platform === AuthPlatform.PORTAL) {
+      payload = {
+        username: user.username,
+        sub: user.id,
+        email: user.email,
+        codigoPreinscricao: user.codigo_preinscricao,
+        platform,
+      };
+    } else if (platform === AuthPlatform.PEOPLE_MANAGEMENT) {
+      permissions = await this.getUserPermissionsPeopleManagement(user.codigo);
+      payload = {
+        username: user.email,
+        nome: user.nome,
+        sub: user.codigo,
+        email: user.email,
+        permissions,
+        platform,
+      };
+    } else {
+      payload = {
+        username: user.username,
+        nome: user.nome,
+        sub: user.pk_utilizador,
+        permissions,
+        roles,
+        platform,
+      };
+    }
 
     const token = this.jwtService.sign(payload);
 
     return {
       access_token: token,
       expires_in: 21600,
-
+      platform,
       user: { ...user, password: undefined },
-      ...(platform === AuthPlatform.GA && { roles, groups, permissions }),
+      ...((platform === AuthPlatform.GA ||
+        platform === AuthPlatform.PEOPLE_MANAGEMENT) && {
+        roles,
+        groups,
+        permissions,
+      }),
       mensagem:
         'Login realizado com sucesso. Utilize o token JWT nas próximas chamadas.',
     };
@@ -460,7 +492,7 @@ export class AuthService {
     }
 
     let userId: any;
-    let message: string;
+    let message = '';
 
     switch (platform) {
       case AuthPlatform.GA: {
@@ -503,6 +535,23 @@ export class AuthService {
         await this.updatePasswordPortal(userId, hashedPassword);
 
         message = 'Senha redefinida com sucesso no Portal.';
+        break;
+      }
+
+      case AuthPlatform.PEOPLE_MANAGEMENT: {
+        const user = await this.findUserByEmailPeopleManagement(payload.email);
+        if (!user) {
+          throw new NotFoundException(
+            'Utilizador não encontrado no People Management.',
+          );
+        }
+
+        userId = user.codigo;
+        const hashedPassword = await this.hashService.criarHash(newPassword);
+
+        await this.updatePasswordPeopleManagement(userId, hashedPassword);
+
+        message = 'Senha redefinida com sucesso no People Management.';
         break;
       }
     }
@@ -626,6 +675,83 @@ WHERE u.PK_UTILIZADOR= :codigo`,
     );
 
     return result.length ? toLowerCaseKeys(result[0]) : null;
+  }
+
+  async findUserByEmailPeopleManagement(email: string): Promise<any> {
+    const result = await this.dataSource.query(
+      `SELECT
+        CODIGO,
+        NOME,
+        BI,
+        NIF,
+        TELEFONE,
+        TELEFONE_ALTERNATIVO,
+        PROVINCIA,
+        MUNICIPIO,
+        MORADA,
+        EMAIL,
+        SENHA AS PASSWORD,
+        PRECISA_MUDAR_SENHA,
+        ESTADO,
+        CRIADO_EM
+      FROM GP_USUARIOS
+      WHERE EMAIL = :email`,
+      [email],
+    );
+
+    return result.length ? toLowerCaseKeys(result[0]) : null;
+  }
+
+  async getUserPermissionsPeopleManagement(codigoUsuario: number): Promise<any[]> {
+    const result = await this.dataSource.query(
+      `WITH PERMISSOES_ORIGEM AS (
+    SELECT
+        up.CODIGO_PERMISSAO,
+        up.ESTADO,
+        1 AS PRIORIDADE
+    FROM GP_USUARIOS_PERMISSOES up
+    WHERE up.CODIGO_USUARIO = :CODIGO_USUARIO
+
+    UNION ALL
+
+    SELECT
+        gp.CODIGO_PERMISSAO,
+        1 AS ESTADO,
+        2 AS PRIORIDADE
+    FROM GP_GRUPOS_USUARIOS gu
+    JOIN GP_GRUPOS g
+        ON g.CODIGO = gu.CODIGO_GRUPO
+       AND g.ESTADO = 1
+    JOIN GP_GRUPOS_PERMISSOES gp
+        ON gp.CODIGO_GRUPO = gu.CODIGO_GRUPO
+       AND gp.ESTADO = 1
+    WHERE gu.CODIGO_USUARIO = :CODIGO_USUARIO
+      AND gu.ESTADO = 1
+),
+PERMISSOES_PRIORIZADAS AS (
+    SELECT
+        CODIGO_PERMISSAO,
+        ESTADO,
+        ROW_NUMBER() OVER (
+            PARTITION BY CODIGO_PERMISSAO
+            ORDER BY PRIORIDADE
+        ) AS RN
+    FROM PERMISSOES_ORIGEM
+)
+SELECT
+    p.CODIGO,
+    p.DESCRICAO
+FROM PERMISSOES_PRIORIZADAS pp
+JOIN GP_PERMISSOES p
+    ON p.CODIGO = pp.CODIGO_PERMISSAO
+   AND p.ESTADO = 1
+WHERE pp.RN = 1
+  AND pp.ESTADO = 1
+ORDER BY p.DESCRICAO`,
+      [codigoUsuario, codigoUsuario],
+    );
+
+    return result.map((row: any) => row.DESCRICAO);
   }
   private normalizeRole(value: string): string {
     return value
@@ -969,6 +1095,19 @@ FROM FK2_MCA_TB_UTILIZADOR u
         hashedPassword,
         codigo,
       } as any,
+    );
+  }
+
+  async updatePasswordPeopleManagement(
+    codigo: number,
+    hashedPassword: string,
+  ): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE GP_USUARIOS
+       SET SENHA = :hashedPassword,
+           PRECISA_MUDAR_SENHA = 0
+       WHERE CODIGO = :codigo`,
+      [hashedPassword, codigo],
     );
   }
   async getPortalUserData(userId: number, semestre?: number): Promise<any> {

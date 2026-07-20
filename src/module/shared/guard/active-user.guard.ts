@@ -12,13 +12,20 @@ export class ActiveUserGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request: any = context.switchToHttp().getRequest<Request>();
-    const user = request.user 
+    const user = request.user;
 
-    if (!user) {
-      throw new UnauthorizedException('Usuário não autenticado.');
+    if (!user || !user.sub) {
+      throw new UnauthorizedException('Usuário não autenticado ou token inválido.');
     }
 
-    // Consulta o usuário na base de dados
+    if (user.platform === 'PEOPLE_MANAGEMENT') {
+      const isPeopleActive = await this.usersService.isUserActivePeopleManagement(user.sub);
+      if (!isPeopleActive) {
+        throw new UnauthorizedException('O seu acesso foi revogado ou usuário inativo (Gestão de Pessoas).');
+      }
+      return true;
+    }
+
     const userDb = await this.usersService.statusLogged(user.sub);
 
     if (!userDb) {

@@ -4,6 +4,7 @@ import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
 export enum AuthPlatform {
   GA = 'GA',
   PORTAL = 'PORTAL',
+  PEOPLE_MANAGEMENT = 'PEOPLE_MANAGEMENT',
 }
 
 export class SignInDto {
