@@ -9,15 +9,13 @@ import {
   Query,
   Put,
   Patch,
-  HttpCode,
-  HttpStatus,
-  ParseIntPipe,
+
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
-  ApiParam,
+
   ApiQuery,
   ApiResponse,
   ApiTags,
@@ -45,7 +43,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private httpService: HttpService,
-  ) {}
+  ) { }
 
   @Post('login')
   @ApiOperation({ summary: 'Login do utilizador' })

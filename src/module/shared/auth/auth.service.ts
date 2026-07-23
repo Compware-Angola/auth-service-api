@@ -1150,6 +1150,8 @@ SELECT
   s.Designacao                  AS sala,
   per.Designacao                AS periodo,
   per.Codigo                    AS periodoId,
+  tc.sigla                      AS sigla_tipo_candidatura,
+  tc.Designacao                 AS tipo_candidatura_designacao,
 
   us.foto                       AS foto,
   us.updated_at                 AS data_actualizacao,
@@ -1263,6 +1265,7 @@ LEFT JOIN fk2_tb_cursos   c     ON c.Codigo  = m.Codigo_Curso
 LEFT JOIN fk2_tb_cursos   cr    ON cr.Codigo = p.Curso_Candidatura
 LEFT JOIN fk2_tb_turmas   t     ON t.Codigo  = conf.Codigo_Turma
 LEFT JOIN fk2_tb_salas    s     ON s.Codigo  = t.Codigo_Sala
+LEFT JOIN fk2_tb_tipo_candidatura tc ON tc.id = p.codigo_tipo_candidatura
 LEFT JOIN fk2_tb_periodos per   ON per.Codigo = p.Codigo_Turno
 LEFT JOIN fk2_polos       polos ON polos.id  = p.polo_id
 
