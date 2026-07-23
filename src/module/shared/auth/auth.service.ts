@@ -41,7 +41,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) {}
+  ) { }
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -1163,7 +1163,7 @@ SELECT
   CASE
     WHEN p.Codigo IS NULL THEN 'SEM_PRE_INSCRICAO'
 
-    WHEN p.Codigo IS NOT NULL 
+    WHEN p.Codigo IS NOT NULL  AND m.Codigo IS NULL
          AND (p.codigo_tipo_candidatura = 2 OR p.codigo_tipo_candidatura = 3)
       THEN 'PREINSCRITO_MESTRADO_POS_GRADUACAO'
 
