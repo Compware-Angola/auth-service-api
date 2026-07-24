@@ -86,7 +86,8 @@ export class AuthController {
     @Req() req: any,
   ) {
     const userPayload = req.user;
-    return this.authService.getCurrentUser(userPayload, query);
+    console.log(userPayload);
+    return this.authService.getCurrentUser(userPayload);
   }
 
   @Put('update-password')
