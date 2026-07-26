@@ -82,11 +82,10 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Platform inválida ou ausente.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async getCurrentUser(
-    @Query() query: GetCurrentPlataformDto,
     @Req() req: any,
   ) {
     const userPayload = req.user;
-    return this.authService.getCurrentUser(userPayload, query);
+    return this.authService.getCurrentUser(userPayload);
   }
 
   @Put('update-password')

@@ -266,19 +266,21 @@ export class AuthService {
 
   async getCurrentUser(
     userPayload: JwtPayload,
-    plataformDto: GetCurrentPlataformDto,
   ): Promise<any> {
-    const { platform } = plataformDto;
 
     let user: any;
     let groups: any;
     let roles: any = null;
     let isAuthenticated = true;
     let permissions: any = null;
+    if (!userPayload.platform) {
+      throw new BadRequestException('Plataforma não especificada.');
+    }
 
-    switch (platform) {
+    switch (userPayload.platform) {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
+
         user = await this.findUserByusernameGA(userPayload.username);
         roles = await this.checkUserRoles(userPayload.username);
         groups = await this.findGroupsByUserGA(userPayload.username);
@@ -333,7 +335,7 @@ export class AuthService {
     return {
       isAuthenticated,
       user: user ? { ...user, password: undefined } : null,
-      ...(platform === AuthPlatform.GA && {
+      ...(userPayload.platform === AuthPlatform.GA && {
         roles,
         groups,
         permissions,
