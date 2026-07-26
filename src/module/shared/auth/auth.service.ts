@@ -41,7 +41,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) { }
+  ) {}
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -219,10 +219,10 @@ export class AuthService {
 
       await queryRunner.manager.query(`
       UPDATE FK2_MCA_TB_UTILIZADOR
-      SET 
+      SET
         PASSWORD = '${hashedPassword}',
         LAST_PASSWORD_CHANGE = SYSDATE,
-       
+
         UPDATED_AT = SYSDATE
       WHERE PK_UTILIZADOR = ${usuarioLogadoId}
     `);
@@ -309,6 +309,14 @@ export class AuthService {
         //  const semestre = await this.anoLectivoUtil.getSemestreAtual();
         //  const semestreAtual = semestre.semestre ?? 1;
         user = await this.getPortalUserData(userPayload.sub);
+        isAuthenticated = true;
+        break;
+
+      case AuthPlatform.PEOPLE_MANAGEMENT:
+        //TODO:METER PARA TRAZER POR SEMESTRE
+        //  const semestre = await this.anoLectivoUtil.getSemestreAtual();
+        //  const semestreAtual = semestre.semestre ?? 1;
+        user = await this.findUserByEmailPeopleManagement(userPayload.username);
         isAuthenticated = true;
         break;
 
@@ -576,11 +584,11 @@ export class AuthService {
     u.UPDATED_AT,
     u.LAST_PASSWORD_CHANGE,
     u.ACTIVE_STATE,
-  
+
     u.FOTONAME,
     u.PRIMEIRO_LOG,
-  
-  
+
+
     u.NUMEROMAXIMOTENTATIVAS,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
@@ -608,11 +616,11 @@ WHERE u.USERNAME= :username`,
     u.UPDATED_AT,
     u.LAST_PASSWORD_CHANGE,
     u.ACTIVE_STATE,
-  
+
     u.FOTONAME,
     u.PRIMEIRO_LOG,
-  
-  
+
+
     u.NUMEROMAXIMOTENTATIVAS,
     u.PK_UTILIZADOR
 FROM FK2_MCA_TB_UTILIZADOR u
@@ -624,10 +632,10 @@ WHERE u.PK_UTILIZADOR= :codigo`,
   }
   async findUserByIdPortal(codigo: number): Promise<any> {
     const result = await this.dataSource.query(
-      `SELECT 
-  
+      `SELECT
+
     u.EMAIL,
-   
+
     u.id
     FROM FK2_USERS u
     WHERE u.id = :codigo`,
@@ -665,7 +673,7 @@ WHERE u.PK_UTILIZADOR= :codigo`,
       u.PASSWORD_RESET_REQUIRED
     FROM FK2_USERS u
     LEFT JOIN FK2_TB_PREINSCRICAO p ON u.ID = p.USER_ID
-    WHERE 
+    WHERE
       u.USERNAME = :value
       OR u.EMAIL = :value
       OR u.NUMERO_DOCUMENTO = :value
@@ -702,7 +710,9 @@ WHERE u.PK_UTILIZADOR= :codigo`,
     return result.length ? toLowerCaseKeys(result[0]) : null;
   }
 
-  async getUserPermissionsPeopleManagement(codigoUsuario: number): Promise<any[]> {
+  async getUserPermissionsPeopleManagement(
+    codigoUsuario: number,
+  ): Promise<any[]> {
     const result = await this.dataSource.query(
       `WITH PERMISSOES_ORIGEM AS (
     SELECT
@@ -785,7 +795,7 @@ ORDER BY p.DESCRICAO`,
       `
       SELECT td.CODIGO
       FROM FK2_MGD_TB_DOCENTE td
-      INNER JOIN FK2_MCA_TB_UTILIZADOR tu 
+      INNER JOIN FK2_MCA_TB_UTILIZADOR tu
         ON json_value(td.CODIGO_UTILIZADOR, '$.pk') = tu.PK_UTILIZADOR
       WHERE tu.USERNAME = :1
     `,
@@ -805,7 +815,7 @@ ORDER BY p.DESCRICAO`,
       SELECT
         TC.DESCRICAO AS TIPO_CARGO_DESCRICAO
       FROM FK2_MGU_TB_CARGOS_ADMINISTRATIVOS C
-      INNER JOIN FK2_TB_TIPO_CARGO_ADMINISTRATIVO TC 
+      INNER JOIN FK2_TB_TIPO_CARGO_ADMINISTRATIVO TC
         ON C.FK_TIPO_CARGO = TC.PK_TIPO_CARGO
       INNER JOIN FK2_MCA_TB_UTILIZADOR TU
         ON C.FK_UTILIZADOR = TU.PK_UTILIZADOR
@@ -852,7 +862,7 @@ ORDER BY p.DESCRICAO`,
     g.DESIGNACAO AS designation,
     g.SIGLA AS sigla,
     g.FK_TIPO_DE_GRUPO AS type_group ,
-    tg.DESIGNACAO AS type_group_designation  
+    tg.DESIGNACAO AS type_group_designation
 FROM FK2_MCA_TB_GRUPO_UTILIZADOR gu
 JOIN FK2_MCA_TB_GRUPO g ON gu.FK_GRUPO = g.PK_GRUPO
 JOIN FK2_MCA_TB_UTILIZADOR u ON gu.FK_UTILIZADOR = u.PK_UTILIZADOR
@@ -902,7 +912,7 @@ WHERE u.USERNAME = :username
     u.CODIGO_IMPORTADO,
     u.NOME,
     u.USERNAME,
-   
+
     u.CODIGO,
     u.EMAIL,
     u.OBS,
@@ -931,10 +941,10 @@ FROM FK2_MCA_TB_UTILIZADOR u
     console.log('email: ', email);
     console.log('matricula: ', matricula);
     let query = `
-    SELECT 
- 
+    SELECT
+
     u.EMAIL,
-   
+
     m.Codigo as matricula,
     u.id
     FROM FK2_USERS u
@@ -996,7 +1006,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
     <!-- Corpo -->
     <div class="body">
       <h2 style="color: #bb0b0bff; margin-top: 0;">Nova Solicitação de Atualização de Dados</h2>
-      
+
       <p>Um <strong>usuário do Portal Universitário</strong> submeteu uma solicitação para atualizar ou corrigir os seus dados cadastrais no sistema.</p>
 
       <div class="highlight">
@@ -1172,8 +1182,8 @@ SELECT
     WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL
       THEN 'ADMITIDO_SEM_MATRICULA'
 
-    WHEN m.Codigo IS NOT NULL  
-         AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'DIPLOMADO' 
+    WHEN m.Codigo IS NOT NULL
+         AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'DIPLOMADO'
          AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'TRANSFERIDO'
       THEN 'ALUNO_MATRICULADO'
 
@@ -1277,7 +1287,7 @@ WHERE us.id = :userId
         semestre3: semestre,
         semestre4: semestre,
         userId,
-      } as any
+      } as any,
     );
 
     if (!result || result.length === 0) {

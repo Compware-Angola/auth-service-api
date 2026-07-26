@@ -4,7 +4,6 @@ import { IsEmail, IsEnum, IsNotEmpty, IsString } from 'class-validator';
 import { AuthPlatform } from './signIn.dto';
 
 export class GetCurrentPlataformDto {
-
   @ApiProperty({
     example: 'GA',
     description: 'Plataforma de autenticação',
