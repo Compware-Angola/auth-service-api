@@ -41,7 +41,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) {}
+  ) { }
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -74,11 +74,6 @@ export class AuthService {
 
         if (!user) break;
 
-        await this.userSignInService.registrarOuAtualizarAcesso(
-          user.id,
-          ip,
-          true,
-        );
         break;
 
       case AuthPlatform.PEOPLE_MANAGEMENT:
