@@ -106,6 +106,12 @@ export class AuthService {
       );
     }
 
+    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.precisa_mudar_senha === 1) {
+      throw new ForbiddenException(
+        'Atualize sua senha para ter acesso ao sistema',
+      );
+    }
+
     /* 🔑 Validação da senha */
     const verificarHash = await this.hashService.verificarHash(
       password,
@@ -113,7 +119,7 @@ export class AuthService {
     );
 
     if (!verificarHash) {
-      throw new BadRequestException('Erro ao acessar a Conta');
+      throw new BadRequestException('Credenciais inválidas');
     }
     if (platform === AuthPlatform.GA) {
       await this.userSignInService.registrarOuAtualizarAcesso(
