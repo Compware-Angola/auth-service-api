@@ -1141,9 +1141,9 @@ SELECT
   p.codigo_tipo_candidatura     AS codigo_tipo_candidatura,
   p.Curso_Candidatura           AS Curso_Candidatura,
 
-  a.codigo                      AS codigo_admissao,
-  a.data                        AS data_admissao,
-  a.mediafinal                  AS media_final,
+  COALESCE(a_matricula.codigo, a_latest.codigo)         AS codigo_admissao,
+  COALESCE(a_matricula.data, a_latest.data)             AS data_admissao,
+  COALESCE(a_matricula.mediafinal, a_latest.mediafinal) AS media_final,
 
   m.Codigo                      AS codigo_matricula,
   m.Data_Matricula,
@@ -1151,8 +1151,8 @@ SELECT
   m.Codigo_Curso,
   m.Codigo_Aluno,
 
-  c.Designacao                  AS curso,
-  c.numero_max_cadeiras         AS max_cadeiras_curso,
+  COALESCE(c.Designacao, cr.Designacao)                   AS curso,
+  COALESCE(c.numero_max_cadeiras, cr.numero_max_cadeiras) AS max_cadeiras_curso,
   t.Designacao                  AS turma,
   s.Designacao                  AS sala,
   per.Designacao                AS periodo,
@@ -1164,7 +1164,7 @@ SELECT
   us.updated_at                 AS data_actualizacao,
 
   polos.id                      AS poloId,
-  c.duracao                     AS curso_duracao,
+  COALESCE(c.duracao, cr.duracao) AS curso_duracao,
   cr.duracao                    AS curso_duracao_candidatura,
   polos.designacao              AS polo,
   cr.Designacao                 AS curso_candidatura_designacao,
@@ -1176,7 +1176,7 @@ SELECT
          AND (p.codigo_tipo_candidatura = 2 OR p.codigo_tipo_candidatura = 3)
       THEN 'PREINSCRITO_MESTRADO_POS_GRADUACAO'
 
-    WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL
+    WHEN m.Codigo IS NULL AND COALESCE(a_matricula.codigo, a_latest.codigo) IS NOT NULL
       THEN 'ADMITIDO_SEM_MATRICULA'
 
     WHEN m.Codigo IS NOT NULL
@@ -1229,7 +1229,23 @@ LEFT JOIN (
   WHERE rn = 1
 ) p ON p.user_id = us.id
 
-/* ADMISSÃO */
+/* MATRÍCULA — buscada primeiro, ligando-se a qualquer admissão da preinscrição */
+LEFT JOIN (
+  SELECT * FROM (
+    SELECT m.*,
+           ad.pre_incricao AS pre_incricao_ref,
+           ROW_NUMBER() OVER (PARTITION BY ad.pre_incricao ORDER BY m.Codigo DESC) rn
+    FROM fk2_tb_matriculas m
+    INNER JOIN fk2_tb_admissao ad ON ad.codigo = m.Codigo_Aluno
+  )
+  WHERE rn = 1
+) m ON m.pre_incricao_ref = p.Codigo
+
+/* ADMISSÃO ligada à matrícula encontrada (prioridade) */
+LEFT JOIN fk2_tb_admissao a_matricula
+  ON a_matricula.codigo = m.Codigo_Aluno
+
+/* ADMISSÃO mais recente por preinscrição (fallback, quando não há matrícula) */
 LEFT JOIN (
   SELECT * FROM (
     SELECT a.*,
@@ -1237,17 +1253,7 @@ LEFT JOIN (
     FROM fk2_tb_admissao a
   )
   WHERE rn = 1
-) a ON a.pre_incricao = p.Codigo
-
-/* MATRÍCULA */
-LEFT JOIN (
-  SELECT * FROM (
-    SELECT m.*,
-           ROW_NUMBER() OVER (PARTITION BY m.Codigo_Aluno ORDER BY m.Codigo DESC) rn
-    FROM fk2_tb_matriculas m
-  )
-  WHERE rn = 1
-) m ON m.Codigo_Aluno = a.codigo
+) a_latest ON a_latest.pre_incricao = p.Codigo
 
 /* CONFIRMAÇÕES PRINCIPAL */
 LEFT JOIN (
