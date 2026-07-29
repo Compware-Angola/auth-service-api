@@ -106,7 +106,7 @@ export class AuthController {
     );
   }
   @Get('validate-token')
-  @UseGuards(JwtAuthGuard, ActiveUserGuard)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   validateToken(@Req() req: any) {
     const userPayload = req.user;
