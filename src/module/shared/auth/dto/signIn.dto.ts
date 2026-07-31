@@ -5,6 +5,7 @@ export enum AuthPlatform {
   GA = 'GA',
   PORTAL = 'PORTAL',
   PEOPLE_MANAGEMENT = 'PEOPLE_MANAGEMENT',
+  PEOPLE_MANAGEMENT_PORTAL = 'PEOPLE_MANAGEMENT_PORTAL',
 }
 
 export class SignInDto {

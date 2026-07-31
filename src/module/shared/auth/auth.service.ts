@@ -106,6 +106,12 @@ export class AuthService {
       );
     }
 
+    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.precisa_mudar_senha === 1) {
+      throw new ForbiddenException(
+        'Atualize sua senha para ter acesso ao sistema',
+      );
+    }
+
     /* 🔑 Validação da senha */
     const verificarHash = await this.hashService.verificarHash(
       password,
@@ -113,7 +119,7 @@ export class AuthService {
     );
 
     if (!verificarHash) {
-      throw new BadRequestException('Erro ao acessar a Conta');
+      throw new BadRequestException('Credenciais inválidas');
     }
     if (platform === AuthPlatform.GA) {
       await this.userSignInService.registrarOuAtualizarAcesso(
@@ -354,7 +360,13 @@ export class AuthService {
         if (!existsPortal) {
           return { email, exists: false };
         }
+        return { email, exists: true };
 
+      case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
+        const existsPeopleManagementPortal = await this.checkEmailExistsPeopleManagementPortal(email);
+        if (!existsPeopleManagementPortal) {
+          return { email, exists: false };
+        }
         return { email, exists: true };
 
       default:
@@ -375,7 +387,7 @@ export class AuthService {
     const { email, matricula, platform } = dto;
 
     // Validação inicial da plataforma
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL].includes(platform)) {
+    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL].includes(platform)) {
       throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
@@ -415,7 +427,19 @@ export class AuthService {
         resetUrlBase = process.env.URL_PORTAL || 'http://localhost:3001';
         userId = user.id;
         break;
+      case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
+        if (!email) {
+          throw new BadRequestException('Email é obrigatório.');
+        }
+        user = await this.checkEmailExistsPeopleManagementPortal(email);
+        console.log(user, 'user');
 
+        if (!user) {
+          throw new BadRequestException('Email não encontrados.');
+        }
+        resetUrlBase = process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
+        userId = user.id;
+        break;
       default:
         // Nunca chega aqui por causa da validação inicial
         throw new BadRequestException('Plataforma não suportada.');
@@ -437,20 +461,14 @@ export class AuthService {
     const resetToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     // Construção do link
-    const resetPath =
-      platform === AuthPlatform.GA
-        ? '/auth/primeiro-acesso/redefinir' // ou o path que usas no frontend GA
-        : '/auth/renovar-senha';
+    const resetPath = this.resetPath(platform)
 
     const resetLink = `${resetUrlBase}${resetPath}/${resetToken}`;
 
     console.log(`[Reset Link - ${platform}]`, resetLink); // para debug
 
     // Envio de email (podes parametrizar o assunto e template por plataforma se quiseres)
-    const subject =
-      platform === AuthPlatform.GA
-        ? 'Configuração Inicial de Senha - Portal Académico GA'
-        : 'Redefinição de Senha - Portal Académico';
+    const subject = this.subject(platform);
 
     const html = `
     <p>Olá,</p>
@@ -473,7 +491,7 @@ export class AuthService {
     const { token, newPassword, platform } = resetPasswordDto;
 
     // 1. Validar plataforma logo no início
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL].includes(platform)) {
+    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL, AuthPlatform.PEOPLE_MANAGEMENT].includes(platform)) {
       throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
@@ -524,8 +542,6 @@ export class AuthService {
       }
 
       case AuthPlatform.PORTAL: {
-        // Para PORTAL, Buscar pelo ID
-        console.log('payload: ', payload);
         const user = await this.findUserByIdPortal(payload.sub as number);
         if (!user) {
           throw new NotFoundException('Utilizador não encontrado no Portal.');
@@ -550,7 +566,21 @@ export class AuthService {
             'Utilizador não encontrado no People Management.',
           );
         }
+        userId = user.codigo;
+        const hashedPassword = await this.hashService.criarHash(newPassword);
 
+        await this.updatePasswordPeopleManagement(userId, hashedPassword);
+
+        message = 'Senha redefinida com sucesso no People Management.';
+        break;
+      }
+      case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL: {
+        const user = await this.findUserByEmailPeopleManagement(payload.email);
+        if (!user) {
+          throw new NotFoundException(
+            'Utilizador não encontrado no People Management.',
+          );
+        }
         userId = user.codigo;
         const hashedPassword = await this.hashService.criarHash(newPassword);
 
@@ -965,6 +995,17 @@ FROM FK2_MCA_TB_UTILIZADOR u
     return (await toLowerCaseKeys(result[0])) || null;
   }
 
+  async checkEmailExistsPeopleManagementPortal(email: string): Promise<any> { 
+    const result = await this.dataSource.query(
+      `SELECT
+     P.EMAIL,gp_us.CODIGO as id from FK2_TB_PESSOA P
+      inner join GP_USUARIOS gp_us on gp_us.email = P.email
+      where P.email = :email`,
+      [email.trim()],
+    );
+    return await toLowerCaseKeys(result[0]);
+  }
+    
   async sendRenewData(peloadData: SendRenewDataDto) {
     const { email, enrrolment, phone, details, platform } = peloadData;
     switch (platform) {
@@ -1344,4 +1385,29 @@ WHERE us.id = :userId
       taskId: job.id,
     };
   }
+  private resetPath(platform: AuthPlatform): string {
+    switch (platform) {
+      case AuthPlatform.GA:
+        return '/auth/primeiro-acesso/redefinir';
+      case AuthPlatform.PORTAL:
+        return '/auth/renovar-senha';
+      case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
+        return '/reset-password';
+      default:
+        throw new BadRequestException('Plataforma não suportada.');
+    }
+  }
+private subject(platform: AuthPlatform): string {
+  switch (platform) {
+      case AuthPlatform.GA:
+        return "Configuração Inicial de Senha - Portal Académico GA";
+      case AuthPlatform.PORTAL:
+        return "Redefinição de Senha - Portal Académico";
+      case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
+        return "Redefinição de Senha - Portal de Candidatura";
+      default:
+        throw new BadRequestException('Plataforma não suportada.');
+    }
+}
+    
 }
