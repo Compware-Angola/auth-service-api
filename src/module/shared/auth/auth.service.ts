@@ -1400,7 +1400,7 @@ CASE
             THEN 'ADMITIDO_SEM_MATRICULA'
 
           WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL AND a.MEDIAFINAL < 9.5
-            THEN 'REPROVADO'
+            THEN 'NAO_ADMITIDO'
 
           WHEN m.Codigo IS NOT NULL AND TRIM(UPPER(m.ESTADO_MATRICULA)) = 'DIPLOMADO'
             THEN 'DIPLOMADO'
