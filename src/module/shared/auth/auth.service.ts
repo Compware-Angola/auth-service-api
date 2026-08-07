@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -439,6 +440,7 @@ export class AuthService {
         }
         resetUrlBase = process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
         userId = user.id;
+        console.log({ resetUrlBase, userId })
         break;
       default:
         // Nunca chega aqui por causa da validação inicial
@@ -575,16 +577,16 @@ export class AuthService {
         break;
       }
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL: {
-        const user = await this.findUserByEmailPeopleManagement(payload.email);
+        const user = await this.checkEmailExistsPeopleManagementPortal(payload.email);
         if (!user) {
           throw new NotFoundException(
             'Utilizador não encontrado no People Management.',
           );
         }
-        userId = user.codigo;
+        userId = user.id;
         const hashedPassword = await this.hashService.criarHash(newPassword);
 
-        await this.updatePasswordPeopleManagement(userId, hashedPassword);
+        await this.updatePasswordPeopleManagementPortal(userId, hashedPassword);
 
         message = 'Senha redefinida com sucesso no People Management.';
         break;
@@ -995,17 +997,30 @@ FROM FK2_MCA_TB_UTILIZADOR u
     return (await toLowerCaseKeys(result[0])) || null;
   }
 
-  async checkEmailExistsPeopleManagementPortal(email: string): Promise<any> { 
-    const result = await this.dataSource.query(
+  async checkEmailExistsPeopleManagementPortal(email: string): Promise<any> {
+    const result1 = await this.dataSource.query(
       `SELECT
-     P.EMAIL,gp_us.CODIGO as id from FK2_TB_PESSOA P
+       P.EMAIL,gp_us.CODIGO as id 
+       from FK2_TB_PESSOA P
       inner join GP_USUARIOS gp_us on gp_us.email = P.email
       where P.email = :email`,
       [email.trim()],
     );
-    return await toLowerCaseKeys(result[0]);
+    if (result1.length > 0) {
+      return await toLowerCaseKeys(result1[0]);
+    }
+    const result2 = await this.dataSource.query(`
+    SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID 
+    FROM FK2_MGD_TB_CANDIDATURA candidatura
+    INNER JOIN FK2_TB_PESSOA pessoa
+      ON pessoa.PK_PESSOA = JSON_VALUE(candidatura.FK_PESSOA, '$.pk_pessoa')
+    WHERE  pessoa.EMAIL = :email`, [email.trim()])
+    if (result2.length > 0) {
+      return await toLowerCaseKeys(result2[0]);
+    }
+    return null
   }
-    
+
   async sendRenewData(peloadData: SendRenewDataDto) {
     const { email, enrrolment, phone, details, platform } = peloadData;
     switch (platform) {
@@ -1158,6 +1173,145 @@ FROM FK2_MCA_TB_UTILIZADOR u
       [hashedPassword, codigo],
     );
   }
+
+
+  async updatePasswordPeopleManagementPortal(
+    codigo: number,
+    hashedPassword: string,
+  ): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const existsInGP = await queryRunner.query(
+        `
+      SELECT CODIGO
+      FROM GP_USUARIOS
+      WHERE CODIGO = :1
+      `,
+        [codigo],
+      );
+
+      if (existsInGP.length > 0) {
+        await queryRunner.query(
+          `
+        UPDATE GP_USUARIOS
+        SET
+          SENHA = :1,
+          PRECISA_MUDAR_SENHA = 0
+        WHERE CODIGO = :2
+        `,
+          [hashedPassword, codigo],
+        );
+
+        await queryRunner.commitTransaction();
+        return;
+      }
+
+      const pessoaGA = await queryRunner.query(
+        `
+      SELECT
+        PK_PESSOA,
+        NOME_COMPLETO AS nome_completo,
+        FK_GENERO,
+        FK_NACIONALIDADE,
+        EMAIL,
+        NUM_DOC_IDENTIFICACAO AS num_doc_identificacao,
+        TELEFONE1,
+        TELEFONE2
+      FROM FK2_TB_PESSOA
+      WHERE PK_PESSOA = :1
+      `,
+        [codigo],
+      );
+      if (!pessoaGA.length) {
+        throw new Error('Pessoa não encontrada.');
+      }
+
+      const pessoa = pessoaGA[0];
+      console.log({ pessoa })
+
+      await queryRunner.query(
+        `
+      INSERT INTO GP_USUARIOS (
+        NOME,
+        BI,
+        TELEFONE,
+        TELEFONE_ALTERNATIVO,
+        EMAIL,
+        SENHA,
+        PROVINCIA,
+        MUNICIPIO,
+        MORADA,
+        ESTADO,
+        PRECISA_MUDAR_SENHA
+      )
+      VALUES (
+        :1,
+        :2,
+        :3,
+        :4,
+        :5,
+        :6,
+        :7,
+        :8,
+        :9,
+        :10,
+        :11
+      )
+      `,
+        [
+          toLowerCaseKeys(pessoa).nome_completo,
+          toLowerCaseKeys(pessoa).num_doc_identificacao,
+          toLowerCaseKeys(pessoa).telefone1,
+          toLowerCaseKeys(pessoa).telefone2,
+          toLowerCaseKeys(pessoa).email,
+          hashedPassword,
+          'Unknown',
+          'Unknown',
+          'Unknown',
+          1,
+          0,
+        ],
+      );
+
+
+      const [usuario] = await queryRunner.query(`
+      SELECT CODIGO
+      FROM GP_USUARIOS
+      WHERE EMAIL = :1
+      ORDER BY CODIGO DESC
+      FETCH FIRST 1 ROW ONLY
+    `, [toLowerCaseKeys(pessoa).email]);
+      console.log({ usuario: toLowerCaseKeys(usuario) });
+      await queryRunner.query(
+        `
+      INSERT INTO GP_CANDIDATOS (
+        CODIGO_USUARIO,
+        ESTADO
+      )
+      VALUES (
+        :1,
+        :2
+      )
+      `,
+        [
+          toLowerCaseKeys(usuario).codigo,
+          'APROVADO',
+        ],
+      );
+
+      await queryRunner.commitTransaction();
+    } catch (error) {
+      console.error(error);
+      await queryRunner.rollbackTransaction();
+      throw new InternalServerErrorException('Erro ao atualizar senha');
+    } finally {
+      await queryRunner.release();
+    }
+  }
   async getPortalUserData(userId: number, semestre?: number): Promise<any> {
     const result = await this.dataSource.query(
       `
@@ -1182,9 +1336,9 @@ SELECT
   p.codigo_tipo_candidatura     AS codigo_tipo_candidatura,
   p.Curso_Candidatura           AS Curso_Candidatura,
 
-  COALESCE(a_matricula.codigo, a_latest.codigo)         AS codigo_admissao,
-  COALESCE(a_matricula.data, a_latest.data)             AS data_admissao,
-  COALESCE(a_matricula.mediafinal, a_latest.mediafinal) AS media_final,
+  a.codigo                      AS codigo_admissao,
+  a.data                        AS data_admissao,
+  a.mediafinal                  AS media_final,
 
   m.Codigo                      AS codigo_matricula,
   m.Data_Matricula,
@@ -1192,8 +1346,8 @@ SELECT
   m.Codigo_Curso,
   m.Codigo_Aluno,
 
-  COALESCE(c.Designacao, cr.Designacao)                   AS curso,
-  COALESCE(c.numero_max_cadeiras, cr.numero_max_cadeiras) AS max_cadeiras_curso,
+  c.Designacao                  AS curso,
+  c.numero_max_cadeiras         AS max_cadeiras_curso,
   t.Designacao                  AS turma,
   s.Designacao                  AS sala,
   per.Designacao                AS periodo,
@@ -1205,32 +1359,59 @@ SELECT
   us.updated_at                 AS data_actualizacao,
 
   polos.id                      AS poloId,
-  COALESCE(c.duracao, cr.duracao) AS curso_duracao,
+  c.duracao                     AS curso_duracao,
   cr.duracao                    AS curso_duracao_candidatura,
   polos.designacao              AS polo,
   cr.Designacao                 AS curso_candidatura_designacao,
 
-  CASE
-    WHEN p.Codigo IS NULL THEN 'SEM_PRE_INSCRICAO'
+CASE
+  WHEN p.Codigo IS NULL THEN 'SEM_PRE_INSCRICAO'
 
-    WHEN p.Codigo IS NOT NULL  AND m.Codigo IS NULL
-         AND (p.codigo_tipo_candidatura = 2 OR p.codigo_tipo_candidatura = 3)
-      THEN 'PREINSCRITO_MESTRADO_POS_GRADUACAO'
+  ELSE
+    CASE
+      -- Ramo MESTRADO/POS-GRADUACAO
+      WHEN p.codigo_tipo_candidatura IN (2, 3) THEN
+        CASE
+          WHEN m.Codigo IS NULL AND a.codigo IS NULL
+            THEN 'PREINSCRITO_MESTRADO_POS_GRADUACAO'
 
-    WHEN m.Codigo IS NULL AND COALESCE(a_matricula.codigo, a_latest.codigo) IS NOT NULL
-      THEN 'ADMITIDO_SEM_MATRICULA'
+          WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL
+            THEN 'ADMITIDO_SEM_MATRICULA_MESTRADO_POS_GRADUACAO'
 
-    WHEN m.Codigo IS NOT NULL
-         AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'DIPLOMADO'
-         AND TRIM(UPPER(m.ESTADO_MATRICULA)) <> 'TRANSFERIDO'
-      THEN 'ALUNO_MATRICULADO'
+          WHEN m.Codigo IS NOT NULL AND TRIM(UPPER(m.ESTADO_MATRICULA)) = 'DIPLOMADO'
+            THEN 'DIPLOMADO_MESTRADO_POS_GRADUACAO'
 
-    WHEN TRIM(UPPER(m.ESTADO_MATRICULA)) = 'DIPLOMADO'
-      THEN 'DIPLOMADO'
+          WHEN m.Codigo IS NOT NULL AND TRIM(UPPER(m.ESTADO_MATRICULA)) = 'TRANSFERIDO'
+            THEN 'TRANSFERIDO_MESTRADO_POS_GRADUACAO'
 
-    ELSE 'PREINSCRITO'
-  END AS estado_aluno,
+          WHEN m.Codigo IS NOT NULL
+            THEN 'ALUNO_MATRICULADO_MESTRADO_POS_GRADUACAO'
 
+          ELSE 'PREINSCRITO_MESTRADO_POS_GRADUACAO'
+        END
+
+      -- Ramo normal (demais tipos de candidatura)
+      ELSE
+        CASE
+          WHEN m.Codigo IS NULL AND a.codigo IS NULL
+            THEN 'PREINSCRITO'
+
+          WHEN m.Codigo IS NULL AND a.codigo IS NOT NULL
+            THEN 'ADMITIDO_SEM_MATRICULA'
+
+          WHEN m.Codigo IS NOT NULL AND TRIM(UPPER(m.ESTADO_MATRICULA)) = 'DIPLOMADO'
+            THEN 'DIPLOMADO'
+
+          WHEN m.Codigo IS NOT NULL AND TRIM(UPPER(m.ESTADO_MATRICULA)) = 'TRANSFERIDO'
+            THEN 'TRANSFERIDO'
+
+          WHEN m.Codigo IS NOT NULL
+            THEN 'ALUNO_MATRICULADO'
+
+          ELSE 'PREINSCRITO'
+        END
+    END
+END AS estado_aluno,
 /* =========================
    CONFIRMAÇÕES (JSON)
 ========================= */
@@ -1270,23 +1451,7 @@ LEFT JOIN (
   WHERE rn = 1
 ) p ON p.user_id = us.id
 
-/* MATRÍCULA — buscada primeiro, ligando-se a qualquer admissão da preinscrição */
-LEFT JOIN (
-  SELECT * FROM (
-    SELECT m.*,
-           ad.pre_incricao AS pre_incricao_ref,
-           ROW_NUMBER() OVER (PARTITION BY ad.pre_incricao ORDER BY m.Codigo DESC) rn
-    FROM fk2_tb_matriculas m
-    INNER JOIN fk2_tb_admissao ad ON ad.codigo = m.Codigo_Aluno
-  )
-  WHERE rn = 1
-) m ON m.pre_incricao_ref = p.Codigo
-
-/* ADMISSÃO ligada à matrícula encontrada (prioridade) */
-LEFT JOIN fk2_tb_admissao a_matricula
-  ON a_matricula.codigo = m.Codigo_Aluno
-
-/* ADMISSÃO mais recente por preinscrição (fallback, quando não há matrícula) */
+/* ADMISSÃO */
 LEFT JOIN (
   SELECT * FROM (
     SELECT a.*,
@@ -1294,7 +1459,17 @@ LEFT JOIN (
     FROM fk2_tb_admissao a
   )
   WHERE rn = 1
-) a_latest ON a_latest.pre_incricao = p.Codigo
+) a ON a.pre_incricao = p.Codigo
+
+/* MATRÍCULA */
+LEFT JOIN (
+  SELECT * FROM (
+    SELECT m.*,
+           ROW_NUMBER() OVER (PARTITION BY m.Codigo_Aluno ORDER BY m.Codigo DESC) rn
+    FROM fk2_tb_matriculas m
+  )
+  WHERE rn = 1
+) m ON m.Codigo_Aluno = a.codigo
 
 /* CONFIRMAÇÕES PRINCIPAL */
 LEFT JOIN (
@@ -1397,8 +1572,8 @@ WHERE us.id = :userId
         throw new BadRequestException('Plataforma não suportada.');
     }
   }
-private subject(platform: AuthPlatform): string {
-  switch (platform) {
+  private subject(platform: AuthPlatform): string {
+    switch (platform) {
       case AuthPlatform.GA:
         return "Configuração Inicial de Senha - Portal Académico GA";
       case AuthPlatform.PORTAL:
@@ -1408,6 +1583,6 @@ private subject(platform: AuthPlatform): string {
       default:
         throw new BadRequestException('Plataforma não suportada.');
     }
-}
-    
+  }
+
 }
