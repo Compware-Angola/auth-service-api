@@ -387,8 +387,8 @@ export class AuthService {
     const { email, matricula, platform } = dto;
 
     // Validação inicial da plataforma
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL].includes(platform)) {
-      throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
+    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL, AuthPlatform.PEOPLE_MANAGEMENT].includes(platform)) {
+      throw new BadRequestException('Plataforma inválida. Use GA, PORTAL ou PEOPLE_MANAGEMENT.');
     }
 
     let user: any; // Ajuste o tipo conforme tua entity (UserGA | UserPortal | etc)
@@ -439,6 +439,18 @@ export class AuthService {
         }
         resetUrlBase = process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
         userId = user.id;
+        break;
+      case AuthPlatform.PEOPLE_MANAGEMENT:
+        if (!email) {
+          throw new BadRequestException('Email é obrigatório.');
+        }
+        user = await this.findUserByEmailPeopleManagement(email);
+
+        if (!user) {
+          throw new BadRequestException('Email não encontrado.');
+        }
+        resetUrlBase = process.env.URL_PEOPLE_MANAGEMENT || 'http://localhost:4005';
+        userId = user.codigo;
         break;
       default:
         // Nunca chega aqui por causa da validação inicial
@@ -1393,6 +1405,8 @@ WHERE us.id = :userId
         return '/auth/renovar-senha';
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
         return '/reset-password';
+      case AuthPlatform.PEOPLE_MANAGEMENT:
+        return '/reset-password';
       default:
         throw new BadRequestException('Plataforma não suportada.');
     }
@@ -1405,6 +1419,8 @@ private subject(platform: AuthPlatform): string {
         return "Redefinição de Senha - Portal Académico";
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
         return "Redefinição de Senha - Portal de Candidatura";
+      case AuthPlatform.PEOPLE_MANAGEMENT:
+        return "Redefinição de Senha - Gestão de Pessoas";
       default:
         throw new BadRequestException('Plataforma não suportada.');
     }
