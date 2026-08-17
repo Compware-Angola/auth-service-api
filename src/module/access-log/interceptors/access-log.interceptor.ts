@@ -12,6 +12,7 @@ import { Observable, tap } from 'rxjs';
 import { randomUUID } from 'node:crypto';
 import {
   LOG_ACTION_METADATA,
+  SKIP_LOG_METADATA,
   type LogActionMetadata,
 } from 'src/common/constants/log-action.constant';
 import { AccessLogOutcome } from 'src/common/enums/log-outcome.enum';
@@ -49,6 +50,15 @@ export class AccessLogInterceptor implements NestInterceptor {
   }
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const skipLog = this.reflector.getAllAndOverride<boolean>(
+      SKIP_LOG_METADATA,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (skipLog) {
+      return next.handle();
+    }
+
     const request = context.switchToHttp().getRequest<RequestLike>();
     const startedAt = Date.now();
     const metadata = this.reflector.get<LogActionMetadata | undefined>(

@@ -1,6 +1,7 @@
 import { applyDecorators, SetMetadata } from '@nestjs/common';
 import {
   LOG_ACTION_METADATA,
+  SKIP_LOG_METADATA,
   LogActionMetadata,
 } from '../constants/log-action.constant';
 
@@ -31,4 +32,15 @@ export function LogAction(
   }
 
   return applyDecorators(SetMetadata(LOG_ACTION_METADATA, metadata));
+}
+
+/**
+ * Decorator que impede o registo de log para a rota (método ou classe).
+ *
+ * Exemplos:
+ *   @SkipLog()                 // ignora todo o controller
+ *   @SkipLog() @Get('health')  // ignora apenas este endpoint
+ */
+export function SkipLog(): MethodDecorator & ClassDecorator {
+  return applyDecorators(SetMetadata(SKIP_LOG_METADATA, true));
 }

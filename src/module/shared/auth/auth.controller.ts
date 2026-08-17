@@ -31,20 +31,20 @@ import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtAuthGuard } from '../guard/jwt-auth.guard';
 import { ActiveUserGuard } from '../guard/active-user.guard';
-import { LogAction } from 'src/common/decorators/log-action.decorator';
+import { LogAction, SkipLog } from 'src/common/decorators/log-action.decorator';
 import { AccessLogAction } from 'src/common/enum/application.university-academic';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
 
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
   @LogAction(
-    AccessLogAction.UTILIZADORES_LOGADOS,
+    AccessLogAction.LOGIN,
     'AuthController',
-    'Login do utilizador',
+    'Autenticação do utilizador',
   )
   @ApiOperation({ summary: 'Login do utilizador' })
   @ApiResponse({ status: 200, description: 'Login efectuado com sucesso.' })
@@ -52,12 +52,27 @@ export class AuthController {
   @ApiBody({ type: SignInDto })
   async signIn(@Body() signInDto: SignInDto, @Req() req: any) {
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+
+    // Sem token no login — identifica a tentativa pelo username do body
+    // (útil também quando as credenciais falham e nada é retornado)
+    req.headers['x-user-name'] = signInDto.username;
+
     const login = await this.authService.signIn(signInDto, ip);
+
+    // Login com sucesso: anexa a identidade resolvida ao request para que o
+    // interceptor de logs registe userId e userName da pessoa autenticada
+    const user = login.user;
+    req.user = {
+      sub: user?.pk_utilizador ?? user?.id ?? user?.codigo,
+      nome: user?.nome ?? user?.name ?? user?.nome_completo,
+      username: user?.username ?? signInDto.username,
+    };
 
     return login;
   }
   @Get('current-user')
   @UseGuards(JwtAuthGuard)
+  @SkipLog()
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Obtém informações do usuário atual em uma plataforma específica',
@@ -99,6 +114,7 @@ export class AuthController {
       userPayload.sub,
     );
   }
+  @SkipLog()
   @Get('validate-token')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
