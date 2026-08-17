@@ -7,7 +7,7 @@ export enum UserRole {
   RESPONSAVEL_DO_GABINETE_DE_QUALIDADE_E_SERVICOS_PEDAGOGICOS = 'Responsável_do_Gabinete_de_qualidade_e_Serviços_Pedagógicos',
   DIRECTOR = 'Director',
   COORDENADOR = 'Coordenador',
-  DECANO = 'Decano'
+  DECANO = 'Decano',
 
   // outros roles...
 }

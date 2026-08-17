@@ -1,6 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 
- export class VerifyResponse {
+export class VerifyResponse {
   @ApiProperty({ example: true })
   valido: boolean;
 }

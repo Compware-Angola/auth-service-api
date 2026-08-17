@@ -1,31 +1,24 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-
-
+import { bullConnectionFactory } from 'src/common/config/redis-connection.factory';
+import {
+  ACCESS_LOGS_QUEUE,
+  OPERATOR_BOX_QUEUE,
+} from 'src/common/constants/queue.constant';
 
 @Module({
   imports: [
-    ConfigModule, // necessário para pegar as configs
-
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        prefix: config.get<string>('BULL_PREFIX') || 'dev',
-        connection: {
-          host: config.get<string>('REDIS_HOST') || 'localhost',
-          port: config.get<number>('REDIS_PORT') || 6379,
-          // password: config.get<string>('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: bullConnectionFactory,
     }),
-    BullModule.registerQueue({
-      name: 'operator_box',
-    }),
+    BullModule.registerQueue(
+      { name: OPERATOR_BOX_QUEUE },
+      { name: ACCESS_LOGS_QUEUE },
+    ),
   ],
-  providers: [
-
-  ],
+  exports: [BullModule],
 })
-export class BullConfigModule { }
+export class BullConfigModule {}

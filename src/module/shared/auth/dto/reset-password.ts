@@ -12,7 +12,8 @@ import { AuthPlatform } from './signIn.dto';
 
 export class ResetPasswordDto {
   @ApiProperty({
-    description: 'Token recebido por e-mail (geralmente 6-10 caracteres ou UUID)',
+    description:
+      'Token recebido por e-mail (geralmente 6-10 caracteres ou UUID)',
     example: 'abc123xyz789',
     minLength: 6,
   })

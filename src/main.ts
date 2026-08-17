@@ -19,7 +19,9 @@ async function bootstrap() {
   // Configuração do Swagger com suporte a Bearer Token
   const config = new DocumentBuilder()
     .setTitle('🔒 Hash + JWT (Stateless)')
-    .setDescription('Gera hash → JWT → verifica sem BD. Perfeito para micro-serviços!')
+    .setDescription(
+      'Gera hash → JWT → verifica sem BD. Perfeito para micro-serviços!',
+    )
     .setVersion('3.0')
     // 👈 ADICIONE ESTA LINHA
     .addBearerAuth(

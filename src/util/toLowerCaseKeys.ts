@@ -12,9 +12,10 @@ export const toLowerCaseKeys = (data: any): any => {
   if (typeof data === 'object') {
     return Object.keys(data).reduce((acc, key) => {
       const value = data[key];
-      acc[key.toLowerCase()] = typeof value === 'object' && value !== null
-        ? toLowerCaseKeys(value)  
-        : value;
+      acc[key.toLowerCase()] =
+        typeof value === 'object' && value !== null
+          ? toLowerCaseKeys(value)
+          : value;
       return acc;
     }, {} as any);
   }

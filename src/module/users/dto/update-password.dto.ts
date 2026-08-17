@@ -1,6 +1,6 @@
 // src/users/dto/update-password.dto.ts
-import { IsString, MinLength } from 'class-validator'
-import { ApiProperty } from '@nestjs/swagger'
+import { IsString, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdatePasswordDto {
   @ApiProperty({
@@ -10,7 +10,7 @@ export class UpdatePasswordDto {
   })
   @IsString()
   @MinLength(4, { message: 'A nova senha deve ter pelo menos 4 caracteres' })
-  newPassword: string
+  newPassword: string;
 
   @ApiProperty({
     description: 'Confirmação da nova senha',
@@ -19,5 +19,5 @@ export class UpdatePasswordDto {
   })
   @IsString()
   @MinLength(4)
-  confirmPassword: string
+  confirmPassword: string;
 }

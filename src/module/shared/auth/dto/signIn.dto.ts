@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
 
 export enum AuthPlatform {
@@ -9,17 +9,17 @@ export enum AuthPlatform {
 }
 
 export class SignInDto {
-  @ApiProperty({ 
-    example: 'manasses.gomes', 
-    description: 'Nome de usuário para login' 
+  @ApiProperty({
+    example: 'manasses.gomes',
+    description: 'Nome de usuário para login',
   })
   @IsNotEmpty()
   @IsString()
   username: string;
 
-  @ApiProperty({ 
-    example: 'root_teste', 
-    description: 'Senha do usuário para login' 
+  @ApiProperty({
+    example: 'root_teste',
+    description: 'Senha do usuário para login',
   })
   @IsNotEmpty()
   @IsString()
@@ -35,10 +35,7 @@ export class SignInDto {
   platform: AuthPlatform;
 }
 
-
 export class LogoutDto {
-
-
   @ApiProperty({
     example: 'GA',
     description: 'Plataforma de autenticação',
@@ -50,8 +47,6 @@ export class LogoutDto {
 }
 
 export class MakloggedOutDto {
-
-
   @ApiProperty({
     example: 'GA',
     description: 'Plataforma de autenticação',

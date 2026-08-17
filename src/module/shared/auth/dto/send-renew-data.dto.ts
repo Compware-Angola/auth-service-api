@@ -12,8 +12,6 @@ import {
 } from 'class-validator';
 import { AuthPlatform } from './signIn.dto';
 
-
-
 export class SendRenewDataDto {
   @ApiProperty({
     description: 'E-mail institucional atual ou o que o usuário utiliza',
@@ -28,7 +26,6 @@ export class SendRenewDataDto {
     example: '202300145',
   })
   @IsString()
-
   @IsOptional()
   enrrolment?: string;
 
@@ -38,7 +35,6 @@ export class SendRenewDataDto {
   })
   @IsString()
   @IsNotEmpty()
- 
   phone!: string;
 
   @ApiProperty({
@@ -48,7 +44,6 @@ export class SendRenewDataDto {
   })
   @IsString()
   @IsNotEmpty()
- 
   details!: string;
 
   @ApiProperty({

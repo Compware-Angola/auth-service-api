@@ -14,7 +14,8 @@ export class CustomThrottlerGuard extends ThrottlerGuard {
     throw new HttpException(
       {
         statusCode: HttpStatus.TOO_MANY_REQUESTS,
-        message: 'Estás a fazer muitas requisições. Tenta novamente mais tarde.',
+        message:
+          'Estás a fazer muitas requisições. Tenta novamente mais tarde.',
         error: 'Too Many Requests',
         customCode: 'RATE_LIMIT_EXCEEDED',
       },

@@ -14,6 +14,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.guard';
 import { BullConfigModule } from './module/shared/bull/bull.module';
 import { AccessLogModule } from './module/access-log/access-log.module';
+import { databaseOptionsFactory } from './common/config/database.factory';
+import { mailerOptionsFactory } from './common/config/mailer.factory';
 
 @Module({
   imports: [
@@ -47,43 +49,14 @@ import { AccessLogModule } from './module/access-log/access-log.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const isSSL = config.get<string>('DB_SSL') === 'true';
-        return {
-          type: 'oracle' as const,
-          host: config.get<string>('DB_HOST'),
-          port: config.get<number>('DB_PORT', 1521),
-          username: config.get<string>('DB_USERNAME'),
-          password: config.get<string>('DB_PASSWORD'),
-          sid: config.get<string>('DB_SID'),
-          entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: false,
-          logging: ['query', 'error'],
-          extra: {
-            disableInsertDefaultValues: true,
-            ...(isSSL ? { ssl: { rejectUnauthorized: true } } : {}),
-          },
-        };
-      },
+      useFactory: (config: ConfigService) =>
+        databaseOptionsFactory(config, __dirname + '/**/*.entity{.ts,.js}'),
     }),
     // Configuração do Mailer (SMTP)
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        transport: {
-          host: config.get<string>('MAIL_HOST'),
-          port: config.get<number>('MAIL_PORT'),
-          secure: config.get<string>('MAIL_SECURE') === 'true',
-          auth: {
-            user: config.get<string>('MAIL_USER'),
-            pass: config.get<string>('MAIL_PASS'),
-          },
-        },
-        defaults: {
-          from: `"Equipa de Suporte" <${config.get<string>('MAIL_USER')}>`,
-        },
-      }),
+      useFactory: mailerOptionsFactory,
     }),
     AuthModule,
     StudetsModule,

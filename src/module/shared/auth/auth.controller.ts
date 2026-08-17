@@ -38,7 +38,7 @@ import { UserUpdatePasswordDto } from './dto/user-update-password';
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   @Post('login')
   @LogAction(
@@ -58,7 +58,6 @@ export class AuthController {
   }
   @Get('current-user')
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Obtém informações do usuário atual em uma plataforma específica',
@@ -135,7 +134,6 @@ export class AuthController {
     return await this.authService.makloggedOut(query, utilizadorId);
   }
   @Post('check-email')
-
   @ApiOperation({
     summary: 'Verifica se o e-mail existe na plataforma especificada',
   })
@@ -146,7 +144,6 @@ export class AuthController {
     return this.authService.checkEmailExists(checkEmailExistsDto);
   }
   @Post('send-change-password')
-
   @ApiOperation({ summary: 'Envia um e-mail para redefinição de senha' })
   @ApiResponse({
     status: 200,
@@ -161,7 +158,6 @@ export class AuthController {
   }
 
   @Post('reset-password')
-
   @ApiOperation({
     summary: 'Redefine a senha do usuário usando o token enviado por e-mail',
   })
@@ -172,7 +168,6 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
   @Post('send-renew-data')
-
   @ApiOperation({
     summary: 'Envia uma solicitação para renovação de dados cadastrais',
   })

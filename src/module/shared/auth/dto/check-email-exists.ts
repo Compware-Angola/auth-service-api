@@ -1,6 +1,12 @@
 // src/auth/dto/check-email.dto.ts
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsNotEmpty, IsString, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+} from 'class-validator';
 import { AuthPlatform } from './signIn.dto';
 
 export class CheckEmailExistsDto {
@@ -21,7 +27,6 @@ export class CheckEmailExistsDto {
   @IsString()
   @IsOptional()
   matricula?: string;
-
 
   @ApiProperty({
     example: 'PORTAL',

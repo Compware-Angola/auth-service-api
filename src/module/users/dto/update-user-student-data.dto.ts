@@ -1,5 +1,5 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger'
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator'
+import { ApiProperty, PartialType } from '@nestjs/swagger';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiProperty({
@@ -10,7 +10,7 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   @MinLength(1, { message: 'O nome não pode ser vazio' })
-  name?: string
+  name?: string;
 
   @ApiProperty({
     description: 'Número de telefone do usuário',
@@ -19,7 +19,7 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsString()
-  telefone?: string
+  telefone?: string;
 
   @ApiProperty({
     description: 'Email do usuário',
@@ -28,5 +28,5 @@ export class UpdateUserDto {
   })
   @IsOptional()
   @IsEmail({}, { message: 'Insira um email válido' })
-  email?: string
+  email?: string;
 }

@@ -19,7 +19,6 @@ import { HashService } from 'src/app.service';
 import { JwtService } from '@nestjs/jwt';
 import { toLowerCaseKeys } from 'src/util/toLowerCaseKeys';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
@@ -30,19 +29,21 @@ import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { OPERATOR_BOX_QUEUE } from 'src/common/constants/queue.constant';
+import { MailService } from '../mailer/mail.service';
 
 @Injectable()
 export class AuthService {
-  @InjectQueue('operator_box')
+  @InjectQueue(OPERATOR_BOX_QUEUE)
   private readonly operator_boxQueue: Queue;
   constructor(
     private readonly dataSource: DataSource,
     private hashService: HashService,
     private readonly jwtService: JwtService,
-    private readonly mailerService: MailerService,
+    private readonly mailService: MailService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) { }
+  ) {}
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -107,7 +108,10 @@ export class AuthService {
       );
     }
 
-    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.precisa_mudar_senha === 1) {
+    if (
+      platform === AuthPlatform.PEOPLE_MANAGEMENT &&
+      user.precisa_mudar_senha === 1
+    ) {
       throw new ForbiddenException(
         'Atualize sua senha para ter acesso ao sistema',
       );
@@ -266,10 +270,7 @@ export class AuthService {
     // Implement sign-up logic here
   }
 
-  async getCurrentUser(
-    userPayload: JwtPayload,
-  ): Promise<any> {
-
+  async getCurrentUser(userPayload: JwtPayload): Promise<any> {
     let user: any;
     let groups: any;
     let roles: any = null;
@@ -282,7 +283,6 @@ export class AuthService {
     switch (userPayload.platform) {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
-
         user = await this.findUserByusernameGA(userPayload.username);
         roles = await this.checkUserRoles(userPayload.username);
         groups = await this.findGroupsByUserGA(userPayload.username);
@@ -364,7 +364,8 @@ export class AuthService {
         return { email, exists: true };
 
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
-        const existsPeopleManagementPortal = await this.checkEmailExistsPeopleManagementPortal(email);
+        const existsPeopleManagementPortal =
+          await this.checkEmailExistsPeopleManagementPortal(email);
         if (!existsPeopleManagementPortal) {
           return { email, exists: false };
         }
@@ -388,7 +389,13 @@ export class AuthService {
     const { email, matricula, platform } = dto;
 
     // Validação inicial da plataforma
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL].includes(platform)) {
+    if (
+      ![
+        AuthPlatform.GA,
+        AuthPlatform.PORTAL,
+        AuthPlatform.PEOPLE_MANAGEMENT_PORTAL,
+      ].includes(platform)
+    ) {
       throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
@@ -438,9 +445,10 @@ export class AuthService {
         if (!user) {
           throw new BadRequestException('Email não encontrados.');
         }
-        resetUrlBase = process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
+        resetUrlBase =
+          process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
         userId = user.id;
-        console.log({ resetUrlBase, userId })
+        console.log({ resetUrlBase, userId });
         break;
       default:
         // Nunca chega aqui por causa da validação inicial
@@ -463,7 +471,7 @@ export class AuthService {
     const resetToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     // Construção do link
-    const resetPath = this.resetPath(platform)
+    const resetPath = this.resetPath(platform);
 
     const resetLink = `${resetUrlBase}${resetPath}/${resetToken}`;
 
@@ -481,7 +489,7 @@ export class AuthService {
     <p>Atenciosamente,<br>Equipa do Sistema Académico</p>
   `;
     //TODO:CHAMAR O SERVIÇO DE EMAIL !
-    await this.sendEmail(email, subject, html);
+    await this.mailService.send({ to: email, subject, html });
 
     return {
       message: `Email de ${platform === AuthPlatform.GA ? 'configuração' : 'redefinição'} de senha enviado com sucesso.`,
@@ -493,7 +501,14 @@ export class AuthService {
     const { token, newPassword, platform } = resetPasswordDto;
 
     // 1. Validar plataforma logo no início
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL, AuthPlatform.PEOPLE_MANAGEMENT].includes(platform)) {
+    if (
+      ![
+        AuthPlatform.GA,
+        AuthPlatform.PORTAL,
+        AuthPlatform.PEOPLE_MANAGEMENT_PORTAL,
+        AuthPlatform.PEOPLE_MANAGEMENT,
+      ].includes(platform)
+    ) {
       throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
@@ -577,7 +592,9 @@ export class AuthService {
         break;
       }
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL: {
-        const user = await this.checkEmailExistsPeopleManagementPortal(payload.email);
+        const user = await this.checkEmailExistsPeopleManagementPortal(
+          payload.email,
+        );
         if (!user) {
           throw new NotFoundException(
             'Utilizador não encontrado no People Management.',
@@ -1009,16 +1026,19 @@ FROM FK2_MCA_TB_UTILIZADOR u
     if (result1.length > 0) {
       return await toLowerCaseKeys(result1[0]);
     }
-    const result2 = await this.dataSource.query(`
+    const result2 = await this.dataSource.query(
+      `
     SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID 
     FROM FK2_MGD_TB_CANDIDATURA candidatura
     INNER JOIN FK2_TB_PESSOA pessoa
       ON pessoa.PK_PESSOA = JSON_VALUE(candidatura.FK_PESSOA, '$.pk_pessoa')
-    WHERE  pessoa.EMAIL = :email`, [email.trim()])
+    WHERE  pessoa.EMAIL = :email`,
+      [email.trim()],
+    );
     if (result2.length > 0) {
       return await toLowerCaseKeys(result2[0]);
     }
-    return null
+    return null;
   }
 
   async sendRenewData(peloadData: SendRenewDataDto) {
@@ -1118,7 +1138,11 @@ FROM FK2_MCA_TB_UTILIZADOR u
             'E-mail do administrador não configurado.',
           );
         }
-        await this.sendEmail(adminEmail, subject, htmlContent, email);
+        await this.mailService.send({
+          to: adminEmail,
+          subject,
+          html: htmlContent,
+        });
         return {
           message: 'Solicitação de renovação de dados enviada com sucesso.',
         };
@@ -1173,7 +1197,6 @@ FROM FK2_MCA_TB_UTILIZADOR u
       [hashedPassword, codigo],
     );
   }
-
 
   async updatePasswordPeopleManagementPortal(
     codigo: number,
@@ -1231,7 +1254,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       }
 
       const pessoa = pessoaGA[0];
-      console.log({ pessoa })
+      console.log({ pessoa });
 
       await queryRunner.query(
         `
@@ -1277,14 +1300,16 @@ FROM FK2_MCA_TB_UTILIZADOR u
         ],
       );
 
-
-      const [usuario] = await queryRunner.query(`
+      const [usuario] = await queryRunner.query(
+        `
       SELECT CODIGO
       FROM GP_USUARIOS
       WHERE EMAIL = :1
       ORDER BY CODIGO DESC
       FETCH FIRST 1 ROW ONLY
-    `, [toLowerCaseKeys(pessoa).email]);
+    `,
+        [toLowerCaseKeys(pessoa).email],
+      );
       console.log({ usuario: toLowerCaseKeys(usuario) });
       await queryRunner.query(
         `
@@ -1297,10 +1322,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
         :2
       )
       `,
-        [
-          toLowerCaseKeys(usuario).codigo,
-          'APROVADO',
-        ],
+        [toLowerCaseKeys(usuario).codigo, 'APROVADO'],
       );
 
       await queryRunner.commitTransaction();
@@ -1528,21 +1550,6 @@ WHERE us.id = :userId
 
     return row;
   }
-  async sendEmail(
-    to: string,
-    subject: string,
-    htmlContent: string,
-    from?: string,
-  ) {
-    await this.mailerService.sendMail({
-      to: to,
-      // from: from ? undefined : process.env.MAIL_USER,
-      // cc: from ? undefined : process.env.MAIL_USER_CC,
-      subject: subject,
-      html: htmlContent,
-    });
-  }
-
   async queueOperatorBox(
     codigoUtilizador: number,
   ): Promise<{ message: string; taskId: string | undefined }> {
@@ -1578,14 +1585,13 @@ WHERE us.id = :userId
   private subject(platform: AuthPlatform): string {
     switch (platform) {
       case AuthPlatform.GA:
-        return "Configuração Inicial de Senha - Portal Académico GA";
+        return 'Configuração Inicial de Senha - Portal Académico GA';
       case AuthPlatform.PORTAL:
-        return "Redefinição de Senha - Portal Académico";
+        return 'Redefinição de Senha - Portal Académico';
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
-        return "Redefinição de Senha - Portal de Candidatura";
+        return 'Redefinição de Senha - Portal de Candidatura';
       default:
         throw new BadRequestException('Plataforma não suportada.');
     }
   }
-
 }

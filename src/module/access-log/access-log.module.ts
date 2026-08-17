@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
 import { APP_INTERCEPTOR } from '@nestjs/core';
-import { ACCESS_LOGS_QUEUE } from 'src/common/constants/log-action.constant';
+import { BullConfigModule } from 'src/module/shared/bull/bull.module';
 import { AccessLogService } from './access-log.service';
 import { AccessLogInterceptor } from './interceptors/access-log.interceptor';
 
@@ -14,11 +13,7 @@ import { AccessLogInterceptor } from './interceptors/access-log.interceptor';
  * nem ligação ao MongoDB: apenas produz.
  */
 @Module({
-  imports: [
-    BullModule.registerQueue({
-      name: ACCESS_LOGS_QUEUE,
-    }),
-  ],
+  imports: [BullConfigModule],
   providers: [
     AccessLogService,
     {

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { ACCESS_LOGS_QUEUE } from 'src/common/constants/log-action.constant';
+import { ACCESS_LOGS_QUEUE } from 'src/common/constants/queue.constant';
 import type { AccessLogOutcome } from 'src/common/enums/log-outcome.enum';
 import type { TargetResource } from 'src/common/constants/log-action.constant';
 import { CreateAccessLogDto } from './dto/create-access-log.dto';
