@@ -36,4 +36,9 @@ export interface JwtPayload {
    * Plataforma de autenticação (GA, PORTAL, PEOPLE_MANAGEMENT)
    */
   platform?: string;
+
+  /**
+   * Nome completo do utilizador (presente nos payloads GA e PEOPLE_MANAGEMENT)
+   */
+  nome?: string;
 }

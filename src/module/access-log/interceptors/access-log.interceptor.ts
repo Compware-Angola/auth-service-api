@@ -106,18 +106,24 @@ export class AccessLogInterceptor implements NestInterceptor {
         }
       : undefined;
 
+    const userName = this.extractUserName(request);
+    const baseDescription =
+      metadata?.actionDescription ?? `${method} ${path ?? 'unknown'}`;
+
     const log = this.accessLogService.buildLog({
       serviceName: this.serviceName,
       module: metadata?.module ?? controllerName,
       action: metadata?.action ?? `${method}:${path ?? 'unknown'}`,
-      actionDescription:
-        metadata?.actionDescription ?? `${method} ${path ?? 'unknown'}`,
+      actionDescription: userName
+        ? `${baseDescription} — ${userName}`
+        : baseDescription,
       targetResource,
       outcome,
       outcomeDetail,
       statusCode,
       responseTimeMs: Date.now() - startedAt,
       userId: this.extractUserId(request),
+      userName,
       ip: this.extractIp(request),
       requestId: this.extractRequestId(request),
       method,
@@ -187,6 +193,17 @@ export class AccessLogInterceptor implements NestInterceptor {
       request.headers['x-user-id'] ??
       request.headers['x-utilizador-id'];
     return userId !== undefined && userId !== null ? String(userId) : undefined;
+  }
+
+  private extractUserName(request: RequestLike): string | undefined {
+    const userName =
+      request.user?.nome ??
+      request.user?.username ??
+      request.headers['x-user-name'] ??
+      request.headers['x-utilizador-nome'];
+    return typeof userName === 'string' && userName.length > 0
+      ? userName
+      : undefined;
   }
 
   private extractIp(request: RequestLike): string | undefined {

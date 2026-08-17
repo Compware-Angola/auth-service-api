@@ -17,6 +17,7 @@ export class CreateAccessLogDto {
   statusCode?: number;
   responseTimeMs?: number;
   userId?: string;
+  userName?: string;
   ip?: string;
   requestId?: string;
   method?: string;

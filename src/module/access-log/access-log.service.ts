@@ -18,6 +18,7 @@ export interface BuildAccessLogParams {
   statusCode?: number;
   responseTimeMs?: number;
   userId?: string;
+  userName?: string;
   ip?: string;
   requestId: string;
   method?: string;
@@ -65,6 +66,7 @@ export class AccessLogService {
     log.statusCode = params.statusCode;
     log.responseTimeMs = params.responseTimeMs;
     log.userId = params.userId;
+    log.userName = params.userName;
     log.ip = params.ip;
     log.requestId = params.requestId;
     log.method = params.method;
