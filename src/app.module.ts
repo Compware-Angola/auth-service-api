@@ -13,6 +13,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.guard';
 import { BullConfigModule } from './module/shared/bull/bull.module';
+import { AccessLogModule } from './module/access-log/access-log.module';
 
 @Module({
   imports: [
@@ -86,7 +87,8 @@ import { BullConfigModule } from './module/shared/bull/bull.module';
     }),
     AuthModule,
     StudetsModule,
-    BullConfigModule
+    BullConfigModule,
+    AccessLogModule,
   ],
   controllers: [HashController],
   providers: [
@@ -100,4 +102,4 @@ import { BullConfigModule } from './module/shared/bull/bull.module';
     */
   ],
 })
-export class AppModule { }
+export class AppModule {}

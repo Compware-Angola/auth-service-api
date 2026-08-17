@@ -9,13 +9,11 @@ import {
   Query,
   Put,
   Patch,
-
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
-
   ApiQuery,
   ApiResponse,
   ApiTags,
@@ -33,19 +31,21 @@ import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
 import { JwtAuthGuard } from '../guard/jwt-auth.guard';
 import { ActiveUserGuard } from '../guard/active-user.guard';
-import { AccessLogHelper } from 'src/common/helpers/access-log.helper';
-import { HttpService } from '@nestjs/axios';
+import { LogAction } from 'src/common/decorators/log-action.decorator';
+import { AccessLogAction } from 'src/common/enum/application.university-academic';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
 
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private httpService: HttpService,
-  ) { }
+  constructor(private readonly authService: AuthService) { }
 
   @Post('login')
+  @LogAction(
+    AccessLogAction.UTILIZADORES_LOGADOS,
+    'AuthController',
+    'Login do utilizador',
+  )
   @ApiOperation({ summary: 'Login do utilizador' })
   @ApiResponse({ status: 200, description: 'Login efectuado com sucesso.' })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
@@ -54,19 +54,15 @@ export class AuthController {
     const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const login = await this.authService.signIn(signInDto, ip);
 
-    if (signInDto.platform == AuthPlatform.GA) {
-      AccessLogHelper.logAccess(this.httpService, {
-        descricao: `Utilizador ${login?.user?.nome} fez login com sucesso`,
-        fkUtilizadorResponsavel: login.user.pk_utilizador,
-        fkOperacaoLog: 7,
-        ip: req.ip,
-      });
-    }
-
     return login;
   }
   @Get('current-user')
   @UseGuards(JwtAuthGuard)
+  @LogAction(
+    AccessLogAction.UTILIZADORES_LOGADOS,
+    'AuthController',
+    'Consulta do utilizador autenticado',
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Obtém informações do usuário atual em uma plataforma específica',
@@ -81,15 +77,18 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Informações obtidas com sucesso.' })
   @ApiResponse({ status: 400, description: 'Platform inválida ou ausente.' })
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
-  async getCurrentUser(
-    @Req() req: any,
-  ) {
+  async getCurrentUser(@Req() req: any) {
     const userPayload = req.user;
     return this.authService.getCurrentUser(userPayload);
   }
 
   @Put('update-password')
   @UseGuards(JwtAuthGuard)
+  @LogAction(
+    'UPDATE_PASSWORD',
+    'AuthController',
+    'Atualização da senha do utilizador autenticado',
+  )
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Atualiza a senha do usuário autenticado' })
   @ApiResponse({ status: 200, description: 'Senha atualizada com sucesso.' })
@@ -115,23 +114,24 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Post('logout')
+  @LogAction(
+    AccessLogAction.UTILIZADORES_LOGADOS,
+    'AuthController',
+    'Terminar sessão do utilizador',
+  )
   async logout(@Req() req: any, @Body() logoutDTO: LogoutDto) {
     const user = req.user;
     await this.authService.logout(logoutDTO, user.sub);
-
-    if (logoutDTO.platform == AuthPlatform.GA) {
-      await AccessLogHelper.logAccess(this.httpService, {
-        descricao: `Utilizador ${user?.nome} Terminou Sessão`,
-        fkUtilizadorResponsavel: user.sub,
-        fkOperacaoLog: 7,
-        ip: req.ip,
-      });
-    }
   }
 
   //@UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Patch('mak-logged-out/:utilizadorId')
+  @LogAction('MAK_LOGGED_OUT', {
+    module: 'AuthController',
+    actionDescription: 'Terminar sessão de utilizador (admin)',
+    targetResourceType: 'User',
+  })
   async makloggedOut(
     @Param('utilizadorId') utilizadorId: number,
     @Body() query: MakloggedOutDto,
@@ -139,6 +139,11 @@ export class AuthController {
     return await this.authService.makloggedOut(query, utilizadorId);
   }
   @Post('check-email')
+  @LogAction(
+    'CHECK_EMAIL',
+    'AuthController',
+    'Verificação de existência de e-mail',
+  )
   @ApiOperation({
     summary: 'Verifica se o e-mail existe na plataforma especificada',
   })
@@ -149,6 +154,11 @@ export class AuthController {
     return this.authService.checkEmailExists(checkEmailExistsDto);
   }
   @Post('send-change-password')
+  @LogAction(
+    'SEND_CHANGE_PASSWORD',
+    'AuthController',
+    'Envio de e-mail para redefinição de senha',
+  )
   @ApiOperation({ summary: 'Envia um e-mail para redefinição de senha' })
   @ApiResponse({
     status: 200,
@@ -163,6 +173,11 @@ export class AuthController {
   }
 
   @Post('reset-password')
+  @LogAction(
+    'RESET_PASSWORD',
+    'AuthController',
+    'Redefinição de senha via token',
+  )
   @ApiOperation({
     summary: 'Redefine a senha do usuário usando o token enviado por e-mail',
   })
@@ -173,6 +188,11 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
   @Post('send-renew-data')
+  @LogAction(
+    'SEND_RENEW_DATA',
+    'AuthController',
+    'Solicitação de renovação de dados cadastrais',
+  )
   @ApiOperation({
     summary: 'Envia uma solicitação para renovação de dados cadastrais',
   })
