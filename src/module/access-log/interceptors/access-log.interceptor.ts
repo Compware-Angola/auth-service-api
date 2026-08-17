@@ -237,6 +237,14 @@ export class AccessLogInterceptor implements NestInterceptor {
       return paramField;
     }
 
+    if (params) {
+      for (const [key, value] of Object.entries(params)) {
+        if (key.toLowerCase().endsWith('id') && value) {
+          return value;
+        }
+      }
+    }
+
     const body = request.body as
       | { id?: string | number; [key: string]: unknown }
       | undefined;
