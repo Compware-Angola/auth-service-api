@@ -58,11 +58,7 @@ export class AuthController {
   }
   @Get('current-user')
   @UseGuards(JwtAuthGuard)
-  @LogAction(
-    AccessLogAction.UTILIZADORES_LOGADOS,
-    'AuthController',
-    'Consulta do utilizador autenticado',
-  )
+
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Obtém informações do usuário atual em uma plataforma específica',
@@ -139,11 +135,7 @@ export class AuthController {
     return await this.authService.makloggedOut(query, utilizadorId);
   }
   @Post('check-email')
-  @LogAction(
-    'CHECK_EMAIL',
-    'AuthController',
-    'Verificação de existência de e-mail',
-  )
+
   @ApiOperation({
     summary: 'Verifica se o e-mail existe na plataforma especificada',
   })
@@ -154,11 +146,7 @@ export class AuthController {
     return this.authService.checkEmailExists(checkEmailExistsDto);
   }
   @Post('send-change-password')
-  @LogAction(
-    'SEND_CHANGE_PASSWORD',
-    'AuthController',
-    'Envio de e-mail para redefinição de senha',
-  )
+
   @ApiOperation({ summary: 'Envia um e-mail para redefinição de senha' })
   @ApiResponse({
     status: 200,
@@ -173,11 +161,7 @@ export class AuthController {
   }
 
   @Post('reset-password')
-  @LogAction(
-    'RESET_PASSWORD',
-    'AuthController',
-    'Redefinição de senha via token',
-  )
+
   @ApiOperation({
     summary: 'Redefine a senha do usuário usando o token enviado por e-mail',
   })
@@ -188,11 +172,7 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
   @Post('send-renew-data')
-  @LogAction(
-    'SEND_RENEW_DATA',
-    'AuthController',
-    'Solicitação de renovação de dados cadastrais',
-  )
+
   @ApiOperation({
     summary: 'Envia uma solicitação para renovação de dados cadastrais',
   })
