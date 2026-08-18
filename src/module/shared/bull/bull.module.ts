@@ -2,10 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { bullConnectionFactory } from 'src/common/config/redis-connection.factory';
-import {
-  ACCESS_LOGS_QUEUE,
-  OPERATOR_BOX_QUEUE,
-} from 'src/common/constants/queue.constant';
+import { QueueName } from 'src/common/constants/queue.constant';
 
 @Module({
   imports: [
@@ -15,8 +12,8 @@ import {
       useFactory: bullConnectionFactory,
     }),
     BullModule.registerQueue(
-      { name: OPERATOR_BOX_QUEUE },
-      { name: ACCESS_LOGS_QUEUE },
+      { name: QueueName.OPERATOR_BOX },
+      { name: QueueName.ACCESS_LOGS },
     ),
   ],
   exports: [BullModule],

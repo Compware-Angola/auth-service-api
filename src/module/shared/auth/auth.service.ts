@@ -29,12 +29,12 @@ import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { OPERATOR_BOX_QUEUE } from 'src/common/constants/queue.constant';
+import { QueueName } from 'src/common/constants/queue.constant';
 import { MailService } from '../mailer/mail.service';
 
 @Injectable()
 export class AuthService {
-  @InjectQueue(OPERATOR_BOX_QUEUE)
+  @InjectQueue(QueueName.OPERATOR_BOX)
   private readonly operator_boxQueue: Queue;
   constructor(
     private readonly dataSource: DataSource,

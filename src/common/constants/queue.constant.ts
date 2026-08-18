@@ -1,3 +1,4 @@
-export const OPERATOR_BOX_QUEUE = 'operator_box';
-
-export const ACCESS_LOGS_QUEUE = 'access-logs';
+export enum QueueName {
+  OPERATOR_BOX = 'operator_box',
+  ACCESS_LOGS = 'access-logs',
+}
