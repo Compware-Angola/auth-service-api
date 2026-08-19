@@ -24,7 +24,7 @@ export class CheckEmailExistsDto {
     example: 'joao.silva@estudante.uma.ao',
     type: String,
   })
-  @IsString({ message: 'Por favor, insira um biválido' })
+  @IsString({ message: 'Por favor, insira um bi válido' })
   @IsOptional()
   bi?: string;
 

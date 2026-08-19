@@ -1157,10 +1157,18 @@ FROM FK2_MCA_TB_UTILIZADOR u
         );
     }
   }
+
   async updatePasswordPortal(
     codigo: number,
     hashedPassword: string,
   ): Promise<void> {
+    const inscicao = await this.dataSource.query(
+      `SELECT CODIGO FROM FK2_TB_PREINSCRICAO
+    WHERE DELETED_AT IS NULL
+    AND USER_ID = :codigo`,
+      [codigo],
+    );
+
     await this.dataSource.query(
       `UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword,
@@ -1168,7 +1176,15 @@ FROM FK2_MCA_TB_UTILIZADOR u
     WHERE ID = :codigo`,
       [hashedPassword, codigo],
     );
+
+    await this.dataSource.query(
+      `UPDATE FK2_TB_PREINSCRICAO
+    SET DELETED_AT = SYSDATE
+    WHERE CODIGO = :inscicao`,
+      [inscicao[0].CODIGO],
+    );
   }
+
   async updatePasswordGA(
     codigo: number,
     hashedPassword: string,
@@ -1335,7 +1351,6 @@ FROM FK2_MCA_TB_UTILIZADOR u
     }
   }
   async getPortalUserData(userId: number, semestre?: number): Promise<any> {
-    const anoLectivo = await this.anoLectivoUtil.getAnoAtualId();
     const result = await this.dataSource.query(
       `
 SELECT
@@ -1398,7 +1413,7 @@ SELECT
   cr.Designacao                 AS curso_candidatura_designacao,
 
 CASE
-  WHEN p.Codigo IS NULL OR p.Codigo IS NOT NULL AND m.codigo IS NULL AND p.ANOLECTIVO <> :anoLectivo THEN 'SEM_PRE_INSCRICAO'
+  WHEN p.Codigo IS NULL OR p.Codigo IS NOT NULL AND m.codigo IS NULL AND p.DELETED_AT IS NOT NULL THEN 'SEM_PRE_INSCRICAO'
 
   ELSE
     CASE
@@ -1541,12 +1556,9 @@ WHERE us.id = :userId
         semestre2: semestre,
         semestre3: semestre,
         semestre4: semestre,
-        anoLectivo: anoLectivo,
         userId,
       } as any,
     );
-
-    console.log('Ano Lectivo Util: ', anoLectivo);
 
     if (!result || result.length === 0) {
       throw new NotFoundException('Utilizador não encontrado');
