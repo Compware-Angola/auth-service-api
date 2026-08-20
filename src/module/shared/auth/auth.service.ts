@@ -779,7 +779,8 @@ PERMISSOES_PRIORIZADAS AS (
 )
 SELECT
     p.CODIGO,
-    p.DESCRICAO
+    p.DESCRICAO,
+    p.SLUG
 FROM PERMISSOES_PRIORIZADAS pp
 JOIN GP_PERMISSOES p
     ON p.CODIGO = pp.CODIGO_PERMISSAO
@@ -790,7 +791,7 @@ ORDER BY p.DESCRICAO`,
       [codigoUsuario, codigoUsuario],
     );
 
-    return result.map((row: any) => row.DESCRICAO);
+    return result.map((row: any) => row.SLUG);
   }
   private normalizeRole(value: string): string {
     return value
@@ -1000,7 +1001,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
   async checkEmailExistsPeopleManagementPortal(email: string): Promise<any> {
     const result1 = await this.dataSource.query(
       `SELECT
-       P.EMAIL,gp_us.CODIGO as id 
+       P.EMAIL,gp_us.CODIGO as id
        from FK2_TB_PESSOA P
       inner join GP_USUARIOS gp_us on gp_us.email = P.email
       where P.email = :email`,
@@ -1010,7 +1011,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       return await toLowerCaseKeys(result1[0]);
     }
     const result2 = await this.dataSource.query(`
-    SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID 
+    SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID
     FROM FK2_MGD_TB_CANDIDATURA candidatura
     INNER JOIN FK2_TB_PESSOA pessoa
       ON pessoa.PK_PESSOA = JSON_VALUE(candidatura.FK_PESSOA, '$.pk_pessoa')
