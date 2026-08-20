@@ -83,9 +83,27 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Não autorizado.' })
   async getCurrentUser(
     @Req() req: any,
+    @Query('codigoPreinscricao') codigoPreinscricao?: string,
+    @Query('ignorarPreinscricao') ignorarPreinscricao?: string,
   ) {
     const userPayload = req.user;
-    return this.authService.getCurrentUser(userPayload);
+    const codigo = codigoPreinscricao ? Number(codigoPreinscricao) : undefined;
+    const ignorar = ignorarPreinscricao === '1';
+    return this.authService.getCurrentUser(userPayload, codigo, ignorar);
+  }
+
+  @Get('pre-inscricoes')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'Lista todas as pré-inscrições do utilizador autenticado no portal',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de pré-inscrições' })
+  @ApiResponse({ status: 401, description: 'Não autorizado.' })
+  async getPreInscricoes(@Req() req: any) {
+    const userPayload = req.user;
+    return this.authService.getPreInscricoesByUser(userPayload.sub);
   }
 
   @Put('update-password')
