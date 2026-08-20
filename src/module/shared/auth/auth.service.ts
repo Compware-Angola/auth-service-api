@@ -30,6 +30,7 @@ import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { Console } from 'console';
 
 @Injectable()
 export class AuthService {
@@ -42,7 +43,7 @@ export class AuthService {
     private readonly mailerService: MailerService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
-  ) { }
+  ) {}
   async signIn(signInDto: SignInDto, ip: string) {
     const { username, password, platform } = signInDto;
 
@@ -107,7 +108,10 @@ export class AuthService {
       );
     }
 
-    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.precisa_mudar_senha === 1) {
+    if (
+      platform === AuthPlatform.PEOPLE_MANAGEMENT &&
+      user.precisa_mudar_senha === 1
+    ) {
       throw new ForbiddenException(
         'Atualize sua senha para ter acesso ao sistema',
       );
@@ -266,10 +270,7 @@ export class AuthService {
     // Implement sign-up logic here
   }
 
-  async getCurrentUser(
-    userPayload: JwtPayload,
-  ): Promise<any> {
-
+  async getCurrentUser(userPayload: JwtPayload): Promise<any> {
     let user: any;
     let groups: any;
     let roles: any = null;
@@ -282,7 +283,6 @@ export class AuthService {
     switch (userPayload.platform) {
       /* ===================== GA ===================== */
       case AuthPlatform.GA:
-
         user = await this.findUserByusernameGA(userPayload.username);
         roles = await this.checkUserRoles(userPayload.username);
         groups = await this.findGroupsByUserGA(userPayload.username);
@@ -347,7 +347,7 @@ export class AuthService {
   }
 
   async checkEmailExists(chechEmailExists: CheckEmailExistsDto): Promise<any> {
-    const { email, platform } = chechEmailExists;
+    const { email, bi, platform } = chechEmailExists;
     switch (platform) {
       case AuthPlatform.GA:
         const existsGA = await this.checkEmailExistsGA(email);
@@ -357,14 +357,15 @@ export class AuthService {
         return { email, exists: existsGA };
 
       case AuthPlatform.PORTAL:
-        const existsPortal = await this.checkEmailExistsPortal(email);
+        const existsPortal = await this.checkEmailExistsPortal(email, bi);
         if (!existsPortal) {
           return { email, exists: false };
         }
         return { email, exists: true };
 
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
-        const existsPeopleManagementPortal = await this.checkEmailExistsPeopleManagementPortal(email);
+        const existsPeopleManagementPortal =
+          await this.checkEmailExistsPeopleManagementPortal(email);
         if (!existsPeopleManagementPortal) {
           return { email, exists: false };
         }
@@ -385,10 +386,16 @@ export class AuthService {
     };
   }
   async SendchangePassword(dto: CheckEmailExistsDto) {
-    const { email, matricula, platform } = dto;
+    const { email, bi, matricula, platform } = dto;
 
     // Validação inicial da plataforma
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL].includes(platform)) {
+    if (
+      ![
+        AuthPlatform.GA,
+        AuthPlatform.PORTAL,
+        AuthPlatform.PEOPLE_MANAGEMENT_PORTAL,
+      ].includes(platform)
+    ) {
       throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
@@ -415,10 +422,10 @@ export class AuthService {
         if (!email) {
           throw new BadRequestException('Email é obrigatório.');
         }
-        if (!matricula) {
-          throw new BadRequestException('Matrícula é obrigatória.');
-        }
-        user = await this.checkEmailExistsPortal(email, matricula);
+        // if (!matricula) {
+        //   throw new BadRequestException('Matrícula é obrigatória.');
+        // }
+        user = await this.checkEmailExistsPortal(email, bi, matricula);
         console.log(user, 'user');
 
         if (!user) {
@@ -438,9 +445,10 @@ export class AuthService {
         if (!user) {
           throw new BadRequestException('Email não encontrados.');
         }
-        resetUrlBase = process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
+        resetUrlBase =
+          process.env.URL_PEOPLE_MANAGEMENT_PORTAL || 'http://localhost:3001';
         userId = user.id;
-        console.log({ resetUrlBase, userId })
+        console.log({ resetUrlBase, userId });
         break;
       default:
         // Nunca chega aqui por causa da validação inicial
@@ -463,7 +471,7 @@ export class AuthService {
     const resetToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     // Construção do link
-    const resetPath = this.resetPath(platform)
+    const resetPath = this.resetPath(platform);
 
     const resetLink = `${resetUrlBase}${resetPath}/${resetToken}`;
 
@@ -493,7 +501,14 @@ export class AuthService {
     const { token, newPassword, platform } = resetPasswordDto;
 
     // 1. Validar plataforma logo no início
-    if (![AuthPlatform.GA, AuthPlatform.PORTAL, AuthPlatform.PEOPLE_MANAGEMENT_PORTAL, AuthPlatform.PEOPLE_MANAGEMENT].includes(platform)) {
+    if (
+      ![
+        AuthPlatform.GA,
+        AuthPlatform.PORTAL,
+        AuthPlatform.PEOPLE_MANAGEMENT_PORTAL,
+        AuthPlatform.PEOPLE_MANAGEMENT,
+      ].includes(platform)
+    ) {
       throw new BadRequestException('Plataforma inválida. Use GA ou PORTAL.');
     }
 
@@ -577,7 +592,9 @@ export class AuthService {
         break;
       }
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL: {
-        const user = await this.checkEmailExistsPeopleManagementPortal(payload.email);
+        const user = await this.checkEmailExistsPeopleManagementPortal(
+          payload.email,
+        );
         if (!user) {
           throw new NotFoundException(
             'Utilizador não encontrado no People Management.',
@@ -966,26 +983,30 @@ FROM FK2_MCA_TB_UTILIZADOR u
   }
   async checkEmailExistsPortal(
     email: string,
+    bi?: string,
     matricula?: string,
   ): Promise<any> {
     console.log('email: ', email);
     console.log('matricula: ', matricula);
+    console.log('BI: ', bi);
     let query = `
     SELECT
 
     u.EMAIL,
 
-    m.Codigo as matricula,
+    -- m.Codigo as matricula,
     u.id
     FROM FK2_USERS u
     INNER JOIN fk2_tb_preinscricao p ON p.user_id = u.id
-    INNER JOIN fk2_tb_admissao a ON a.pre_incricao = p.Codigo
-    INNER JOIN fk2_tb_matriculas m ON m.Codigo_aluno = a.codigo
+    -- INNER JOIN fk2_tb_admissao a ON a.pre_incricao = p.Codigo
+    -- INNER JOIN fk2_tb_matriculas m ON m.Codigo_aluno = a.codigo
     WHERE LOWER(TRIM(u.EMAIL)) = LOWER(TRIM(:email))
+    AND LOWER(TRIM(u.NUMERO_DOCUMENTO)) = LOWER(TRIM(:bi))
   `;
 
     const params: any = {
       email: email.trim(),
+      bi: bi?.trim(),
     };
 
     if (matricula?.trim()) {
@@ -1010,16 +1031,21 @@ FROM FK2_MCA_TB_UTILIZADOR u
     if (result1.length > 0) {
       return await toLowerCaseKeys(result1[0]);
     }
+    const result2 = await this.dataSource.query(
+      `
+    SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID 
     const result2 = await this.dataSource.query(`
     SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID
     FROM FK2_MGD_TB_CANDIDATURA candidatura
     INNER JOIN FK2_TB_PESSOA pessoa
       ON pessoa.PK_PESSOA = JSON_VALUE(candidatura.FK_PESSOA, '$.pk_pessoa')
-    WHERE  pessoa.EMAIL = :email`, [email.trim()])
+    WHERE  pessoa.EMAIL = :email`,
+      [email.trim()],
+    );
     if (result2.length > 0) {
       return await toLowerCaseKeys(result2[0]);
     }
-    return null
+    return null;
   }
 
   async sendRenewData(peloadData: SendRenewDataDto) {
@@ -1134,10 +1160,18 @@ FROM FK2_MCA_TB_UTILIZADOR u
         );
     }
   }
+
   async updatePasswordPortal(
     codigo: number,
     hashedPassword: string,
   ): Promise<void> {
+    const inscicao = await this.dataSource.query(
+      `SELECT CODIGO FROM FK2_TB_PREINSCRICAO
+    WHERE DELETED_AT IS NULL
+    AND USER_ID = :codigo`,
+      [codigo],
+    );
+
     await this.dataSource.query(
       `UPDATE FK2_USERS
     SET PASSWORD = :hashedPassword,
@@ -1145,7 +1179,15 @@ FROM FK2_MCA_TB_UTILIZADOR u
     WHERE ID = :codigo`,
       [hashedPassword, codigo],
     );
+
+    await this.dataSource.query(
+      `UPDATE FK2_TB_PREINSCRICAO
+    SET DELETED_AT = SYSDATE
+    WHERE CODIGO = :inscicao`,
+      [inscicao[0].CODIGO],
+    );
   }
+
   async updatePasswordGA(
     codigo: number,
     hashedPassword: string,
@@ -1174,7 +1216,6 @@ FROM FK2_MCA_TB_UTILIZADOR u
       [hashedPassword, codigo],
     );
   }
-
 
   async updatePasswordPeopleManagementPortal(
     codigo: number,
@@ -1232,7 +1273,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       }
 
       const pessoa = pessoaGA[0];
-      console.log({ pessoa })
+      console.log({ pessoa });
 
       await queryRunner.query(
         `
@@ -1278,14 +1319,16 @@ FROM FK2_MCA_TB_UTILIZADOR u
         ],
       );
 
-
-      const [usuario] = await queryRunner.query(`
+      const [usuario] = await queryRunner.query(
+        `
       SELECT CODIGO
       FROM GP_USUARIOS
       WHERE EMAIL = :1
       ORDER BY CODIGO DESC
       FETCH FIRST 1 ROW ONLY
-    `, [toLowerCaseKeys(pessoa).email]);
+    `,
+        [toLowerCaseKeys(pessoa).email],
+      );
       console.log({ usuario: toLowerCaseKeys(usuario) });
       await queryRunner.query(
         `
@@ -1298,10 +1341,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
         :2
       )
       `,
-        [
-          toLowerCaseKeys(usuario).codigo,
-          'APROVADO',
-        ],
+        [toLowerCaseKeys(usuario).codigo, 'APROVADO'],
       );
 
       await queryRunner.commitTransaction();
@@ -1336,6 +1376,16 @@ SELECT
   p.saldo_reset_anter           AS saldo_reset_anter,
   p.codigo_tipo_candidatura     AS codigo_tipo_candidatura,
   p.Curso_Candidatura           AS Curso_Candidatura,
+  p.Morada_Completa           AS morada,
+  p.Data_Conclusao           AS data_Conclusao,
+  p.Media_Final           AS Media_Final,
+  p.Data_Emissao_Bi           AS Data_Emissao_Bi,
+  p.Data_Validade_Bi           AS Data_Validade_Bi,
+  p.Data_Validade_Bi           AS Data_Validade_Bi,
+  p.Naturalidade           AS Naturalidade,
+  p.Pai           AS Pai,
+  p.Mae           AS Mae,
+  p.Instituicao_Formacao           AS Instituicao_Formacao,
 
   a.codigo                      AS codigo_admissao,
   a.data                        AS data_admissao,
@@ -1366,7 +1416,7 @@ SELECT
   cr.Designacao                 AS curso_candidatura_designacao,
 
 CASE
-  WHEN p.Codigo IS NULL THEN 'SEM_PRE_INSCRICAO'
+  WHEN p.Codigo IS NULL OR p.Codigo IS NOT NULL AND m.codigo IS NULL AND p.DELETED_AT IS NOT NULL THEN 'SEM_PRE_INSCRICAO'
 
   ELSE
     CASE
@@ -1579,14 +1629,13 @@ WHERE us.id = :userId
   private subject(platform: AuthPlatform): string {
     switch (platform) {
       case AuthPlatform.GA:
-        return "Configuração Inicial de Senha - Portal Académico GA";
+        return 'Configuração Inicial de Senha - Portal Académico GA';
       case AuthPlatform.PORTAL:
-        return "Redefinição de Senha - Portal Académico";
+        return 'Redefinição de Senha - Portal Académico';
       case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
-        return "Redefinição de Senha - Portal de Candidatura";
+        return 'Redefinição de Senha - Portal de Candidatura';
       default:
         throw new BadRequestException('Plataforma não suportada.');
     }
   }
-
 }
