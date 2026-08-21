@@ -268,6 +268,8 @@ export class AuthService {
 
   async getCurrentUser(
     userPayload: JwtPayload,
+    codigoPreinscricao?: number,
+    ignorarPreinscricao: boolean = false,
   ): Promise<any> {
 
     let user: any;
@@ -312,7 +314,11 @@ export class AuthService {
         //TODO:METER PARA TRAZER POR SEMESTRE
         //  const semestre = await this.anoLectivoUtil.getSemestreAtual();
         //  const semestreAtual = semestre.semestre ?? 1;
-        user = await this.getPortalUserData(userPayload.sub);
+        user = await this.getPortalUserData(
+          userPayload.sub,
+          codigoPreinscricao,
+          ignorarPreinscricao,
+        );
         isAuthenticated = true;
         break;
 
@@ -779,7 +785,8 @@ PERMISSOES_PRIORIZADAS AS (
 )
 SELECT
     p.CODIGO,
-    p.DESCRICAO
+    p.DESCRICAO,
+    p.SLUG
 FROM PERMISSOES_PRIORIZADAS pp
 JOIN GP_PERMISSOES p
     ON p.CODIGO = pp.CODIGO_PERMISSAO
@@ -790,7 +797,7 @@ ORDER BY p.DESCRICAO`,
       [codigoUsuario, codigoUsuario],
     );
 
-    return result.map((row: any) => row.DESCRICAO);
+    return result.map((row: any) => row.SLUG);
   }
   private normalizeRole(value: string): string {
     return value
@@ -1000,7 +1007,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
   async checkEmailExistsPeopleManagementPortal(email: string): Promise<any> {
     const result1 = await this.dataSource.query(
       `SELECT
-       P.EMAIL,gp_us.CODIGO as id 
+       P.EMAIL,gp_us.CODIGO as id
        from FK2_TB_PESSOA P
       inner join GP_USUARIOS gp_us on gp_us.email = P.email
       where P.email = :email`,
@@ -1010,7 +1017,7 @@ FROM FK2_MCA_TB_UTILIZADOR u
       return await toLowerCaseKeys(result1[0]);
     }
     const result2 = await this.dataSource.query(`
-    SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID 
+    SELECT pessoa.EMAIL, pessoa.PK_PESSOA AS ID
     FROM FK2_MGD_TB_CANDIDATURA candidatura
     INNER JOIN FK2_TB_PESSOA pessoa
       ON pessoa.PK_PESSOA = JSON_VALUE(candidatura.FK_PESSOA, '$.pk_pessoa')
@@ -1312,7 +1319,12 @@ FROM FK2_MCA_TB_UTILIZADOR u
       await queryRunner.release();
     }
   }
-  async getPortalUserData(userId: number, semestre?: number): Promise<any> {
+  async getPortalUserData(
+    userId: number,
+    codigoPreinscricao?: number,
+    ignorarPreinscricao: boolean = false,
+    semestre?: number,
+  ): Promise<any> {
     const result = await this.dataSource.query(
       `
 SELECT
@@ -1365,6 +1377,9 @@ SELECT
   cr.Designacao                 AS curso_candidatura_designacao,
 
 CASE
+  -- Criação de nova pré-inscrição: força estado de candidato sem pré-inscrição
+  WHEN :ignorarPreinscricao1 = 1 THEN 'SEM_PRE_INSCRICAO'
+
   WHEN p.Codigo IS NULL THEN 'SEM_PRE_INSCRICAO'
 
   ELSE
@@ -1450,6 +1465,8 @@ LEFT JOIN (
     SELECT p.*,
            ROW_NUMBER() OVER (PARTITION BY p.user_id ORDER BY p.Codigo DESC) rn
     FROM fk2_tb_preinscricao p
+    WHERE p.DELETED_AT IS NULL
+      AND (:codigoPreinscricao1 IS NULL OR p.Codigo = :codigoPreinscricao2)
   )
   WHERE rn = 1
 ) p ON p.user_id = us.id
@@ -1508,6 +1525,9 @@ WHERE us.id = :userId
         semestre2: semestre,
         semestre3: semestre,
         semestre4: semestre,
+        codigoPreinscricao1: codigoPreinscricao,
+        codigoPreinscricao2: codigoPreinscricao,
+        ignorarPreinscricao1: ignorarPreinscricao ? 1 : 0,
         userId,
       } as any,
     );
@@ -1527,6 +1547,32 @@ WHERE us.id = :userId
     }
 
     return row;
+  }
+  async getPreInscricoesByUser(userId: number): Promise<any[]> {
+    const result = await this.dataSource.query(
+      `
+SELECT
+  p.Codigo                       AS codigo_preinscricao,
+  p.Curso_Candidatura            AS codigo_curso,
+  cr.Designacao                  AS curso,
+  p.codigo_tipo_candidatura      AS codigo_tipo_candidatura,
+  tc.Designacao                  AS tipo_candidatura,
+  tc.sigla                       AS sigla_tipo_candidatura,
+  polos.Designacao               AS polo,
+  p.Data_Preescrincao              AS data_preinscricao,
+  p.ESTADO_PREISCRICAO_CANDIDATO AS estado
+FROM fk2_tb_preinscricao      p
+LEFT JOIN fk2_tb_cursos           cr    ON cr.Codigo = p.Curso_Candidatura
+LEFT JOIN fk2_tb_tipo_candidatura tc    ON tc.id     = p.codigo_tipo_candidatura
+LEFT JOIN fk2_polos               polos ON polos.id  = p.polo_id
+WHERE p.user_id = :userId
+  AND p.DELETED_AT IS NULL
+ORDER BY p.Codigo DESC
+      `,
+      { userId } as any,
+    );
+
+    return toLowerCaseKeys(result);
   }
   async sendEmail(
     to: string,
