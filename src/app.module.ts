@@ -4,14 +4,11 @@ import { HashService } from './app.service';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './jwt.constants';
 import { HashController } from './app.controller';
-import { AuthModule } from './module/shared/auth/auth.module';
+import { AuthModule } from './module/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/users/users.module';
-import { UserSignInService } from './module/shared/auth/users.signIn.service';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { APP_GUARD } from '@nestjs/core';
-import { CustomThrottlerGuard } from './module/shared/guard/Custom-Throttler.guard';
+import { UserSignInService } from './module/auth/users.signIn.service';
 import { BullConfigModule } from './module/shared/bull/bull.module';
 
 @Module({
