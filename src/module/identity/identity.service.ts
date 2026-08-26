@@ -1,8 +1,11 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { HashService } from 'src/app.service';
 import { IdentityRepository } from './repositories/identity.repository';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
@@ -10,12 +13,16 @@ import { Identity } from './entities/identity.entity';
 
 @Injectable()
 export class IdentityService {
-  constructor(private readonly identityRepository: IdentityRepository) {}
+  constructor(
+    private readonly identityRepository: IdentityRepository,
+    private readonly hashService: HashService,
+  ) {}
 
   async create(dto: CreateIdentityDto): Promise<Identity> {
-    const [byUsername, byEmail] = await Promise.all([
+    const [byUsername, byEmail, byBi] = await Promise.all([
       this.identityRepository.findByUsername(dto.username),
       this.identityRepository.findByEmail(dto.email),
+      this.identityRepository.findByBi(dto.bi),
     ]);
 
     if (byUsername) {
@@ -26,13 +33,23 @@ export class IdentityService {
     if (byEmail) {
       throw new ConflictException('Já existe uma identidade com este email.');
     }
+    if (byBi) {
+      throw new ConflictException('Já existe uma identidade com este BI.');
+    }
 
-    return this.identityRepository.create({
+    const hashedPassword = await this.hashService.criarHash(dto.password);
+
+    const identity = await this.identityRepository.create({
       username: dto.username,
       email: dto.email,
       name: dto.name,
+      bi: dto.bi,
+      avatar: dto.avatar ?? 'default-avatar.png',
+      password: hashedPassword,
       status: 1,
     });
+
+    return this.sanitize(identity);
   }
 
   findAll(): Promise<Identity[]> {
@@ -95,6 +112,13 @@ export class IdentityService {
       }
     }
 
+    if (dto.bi) {
+      const existing = await this.identityRepository.findByBi(dto.bi);
+      if (existing && existing.id !== id) {
+        throw new ConflictException('Já existe uma identidade com este BI.');
+      }
+    }
+
     const updated = await this.identityRepository.update(id, dto);
     return updated as Identity;
   }
@@ -106,5 +130,41 @@ export class IdentityService {
       active ? 1 : 0,
     );
     return updated as Identity;
+  }
+
+  /**
+   * Valida username/email + password. Usado pelo novo fluxo de login
+   * (IdentityAuthModule). Retorna a identidade AINDA com a password —
+   * quem chamar é responsável por não expor esse campo para fora.
+   */
+  async verifyCredentials(
+    identifier: string,
+    password: string,
+  ): Promise<Identity> {
+    const identity = await this.identityRepository.findForLogin(identifier);
+    if (!identity) {
+      throw new UnauthorizedException('Credenciais inválidas.');
+    }
+
+    if (identity.status !== 1) {
+      throw new ForbiddenException(
+        'Identidade inativa. Contacte o administrador do sistema.',
+      );
+    }
+
+    const matches = await this.hashService.verificarHash(
+      password,
+      identity.password,
+    );
+    if (!matches) {
+      throw new UnauthorizedException('Credenciais inválidas.');
+    }
+
+    return identity;
+  }
+
+  private sanitize(identity: Identity): Identity {
+    const { password, ...rest } = identity;
+    return rest as Identity;
   }
 }

@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateIdentityDto {
   @ApiProperty({
@@ -28,4 +35,32 @@ export class CreateIdentityDto {
   @IsString()
   @MaxLength(200)
   name: string;
+
+  @ApiProperty({
+    example: '004521547LA042',
+    description: 'Número do Bilhete de Identidade (único)',
+  })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(150)
+  bi: string;
+
+  @ApiProperty({
+    example: 'https://cdn.uma.ao/avatars/default.png',
+    description: 'URL do avatar. Se omitido, é usado um avatar por omissão.',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  avatar?: string;
+
+  @ApiProperty({
+    example: 'SenhaForte#123',
+    description: 'Senha da identidade (será armazenada com hash)',
+  })
+  @IsNotEmpty()
+  @IsString()
+  @MinLength(6)
+  password: string;
 }
