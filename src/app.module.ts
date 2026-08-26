@@ -10,6 +10,8 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/users/users.module';
 import { UserSignInService } from './module/auth/users.signIn.service';
 import { BullConfigModule } from './module/shared/bull/bull.module';
+import { IdentityModule } from './module/identity/identity.module';
+import { PlatformAccessModule } from './module/platform-access/platform-access.module';
 
 @Module({
   imports: [
@@ -83,7 +85,9 @@ import { BullConfigModule } from './module/shared/bull/bull.module';
     }),
     AuthModule,
     StudetsModule,
-    BullConfigModule
+    BullConfigModule,
+    IdentityModule,
+    PlatformAccessModule,
   ],
   controllers: [HashController],
   providers: [
