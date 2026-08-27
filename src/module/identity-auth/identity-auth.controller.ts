@@ -13,12 +13,12 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 @ApiTags('AUTH-V2')
 @Controller('auth/v2')
 export class IdentityAuthController {
-  constructor(private readonly identityAuthService: IdentityAuthService) {}
+  constructor(private readonly identityAuthService: IdentityAuthService) { }
 
   @Post('login')
   @ApiOperation({
     summary:
-      'Login pelo novo modelo de identidade central (GLOBAL_TB_IDENTITY + Platform Access)',
+      'Login pelo novo modelo de identidade central (TB_GLOBAL_USERS_IDENTITY + Platform Access)',
   })
   @ApiBody({ type: IdentityLoginDto })
   @ApiResponse({ status: 200, description: 'Login efectuado com sucesso.' })

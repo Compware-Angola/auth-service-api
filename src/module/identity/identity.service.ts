@@ -16,7 +16,7 @@ export class IdentityService {
   constructor(
     private readonly identityRepository: IdentityRepository,
     private readonly hashService: HashService,
-  ) {}
+  ) { }
 
   async create(dto: CreateIdentityDto): Promise<Identity> {
     const [byUsername, byEmail, byBi] = await Promise.all([
@@ -45,7 +45,7 @@ export class IdentityService {
       name: dto.name,
       bi: dto.bi,
       avatar: dto.avatar ?? 'default-avatar.png',
-      password: hashedPassword,
+      passwordHash: hashedPassword,
       status: 1,
     });
 
@@ -137,7 +137,7 @@ export class IdentityService {
    * (IdentityAuthModule). Retorna a identidade AINDA com a password —
    * quem chamar é responsável por não expor esse campo para fora.
    */
-  async verifyCredentials(
+  async validateUserCredentials(
     identifier: string,
     password: string,
   ): Promise<Identity> {
@@ -154,7 +154,7 @@ export class IdentityService {
 
     const matches = await this.hashService.verificarHash(
       password,
-      identity.password,
+      identity.passwordHash,
     );
     if (!matches) {
       throw new UnauthorizedException('Credenciais inválidas.');
@@ -164,7 +164,7 @@ export class IdentityService {
   }
 
   private sanitize(identity: Identity): Identity {
-    const { password, ...rest } = identity;
+    const { passwordHash, ...rest } = identity;
     return rest as Identity;
   }
 }

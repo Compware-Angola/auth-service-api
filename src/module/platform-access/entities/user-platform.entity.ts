@@ -9,10 +9,10 @@ import {
 } from 'typeorm';
 
 /**
- * userId referencia UMA_TB_IDENTITY.ID a nível de base de dados (ver migrations/),
+ * userId referencia TB_GLOBAL_USERS_IDENTITY.ID a nível de base de dados (ver migrations/001_create_identity_and_platform_access.sql),
  * sem relação TypeORM directa, para manter este módulo independente do IdentityModule.
  */
-@Entity({ name: 'UMA_TB_USER_PLATFORM' })
+@Entity({ name: 'TB_GLOBAL_USER_PLATFORM' })
 @Unique('UQ_USER_PLATFORM', ['userId', 'platformId'])
 export class UserPlatform {
   @PrimaryGeneratedColumn({ name: 'ID', type: 'int' })

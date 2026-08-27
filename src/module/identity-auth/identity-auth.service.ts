@@ -23,10 +23,10 @@ export class IdentityAuthService {
     private readonly platformAccessService: PlatformAccessService,
     private readonly refreshTokenRepository: RefreshTokenRepository,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async login(dto: IdentityLoginDto) {
-    const identity = await this.identityService.verifyCredentials(
+    const identity = await this.identityService.validateUserCredentials(
       dto.identifier,
       dto.password,
     );
@@ -47,6 +47,7 @@ export class IdentityAuthService {
       identity.id,
       identity.username,
       identity.email,
+      identity.bi || '',
       dto.platformCode,
     );
 
@@ -91,6 +92,7 @@ export class IdentityAuthService {
       identity.id,
       identity.username,
       identity.email,
+      identity.bi || '',
       stored.platformCode,
     );
 
@@ -113,10 +115,11 @@ export class IdentityAuthService {
     identityId: number,
     username: string,
     email: string,
+    bi?: string,
     platformCode?: string,
   ) {
     const access_token = this.jwtService.sign(
-      { sub: identityId, username, email, platform: platformCode },
+      { sub: identityId, username, email, bi, platform: platformCode },
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
     );
 

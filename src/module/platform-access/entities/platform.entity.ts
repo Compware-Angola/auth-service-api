@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
-@Entity({ name: 'UMA_TB_PLATFORM' })
+@Entity({ name: 'TB_GLOBAL_PLATFORMS' })
 export class Platform {
   @PrimaryGeneratedColumn({ name: 'ID', type: 'int' })
   id: number;
