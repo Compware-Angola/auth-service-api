@@ -2,13 +2,13 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 
 import { Request } from 'express';
-import { UserSignInService } from '../auth/users.signIn.service';
+import { UserSignInService } from '../../auth/users.signIn.service';
 
 @Injectable()
 export class ActiveUserGuard implements CanActivate {
   constructor(
     private readonly usersService: UserSignInService,
-  ) {}
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request: any = context.switchToHttp().getRequest<Request>();

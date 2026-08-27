@@ -30,12 +30,11 @@ import {
 import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
-import { GetCurrentPlataformDto } from './dto/get-plataform-user';
-import { JwtAuthGuard } from '../guard/jwt-auth.guard';
-import { ActiveUserGuard } from '../guard/active-user.guard';
+
 import { AccessLogHelper } from 'src/common/helpers/access-log.helper';
 import { HttpService } from '@nestjs/axios';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
+import { JwtAuthGuard } from './guard/jwt-auth.guard';
 
 @ApiTags('AUTH')
 @Controller('auth')
