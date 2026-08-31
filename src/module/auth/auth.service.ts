@@ -1560,6 +1560,7 @@ SELECT
   tc.sigla                       AS sigla_tipo_candidatura,
   polos.Designacao               AS polo,
   p.Data_Preescrincao              AS data_preinscricao,
+  p.ANOLECTIVO                  AS ano_lectivo,
   p.ESTADO_PREISCRICAO_CANDIDATO AS estado
 FROM fk2_tb_preinscricao      p
 LEFT JOIN fk2_tb_cursos           cr    ON cr.Codigo = p.Curso_Candidatura
