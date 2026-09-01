@@ -18,21 +18,42 @@ export class PlatformRepository {
 
   async findAll(queryDto: FindAllPlatformsDto) {
     const { status, page = 1, limit = 10, search } = queryDto;
-    const qb = this.repository.createQueryBuilder('platform');
 
-    // Adiciona WHERE conditions baseado nos parâmetros da query
+    const qb = this.repository
+      .createQueryBuilder('platform')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from('TB_GLOBAL_USER_PLATFORM', 'userPlatform')
+          .where('userPlatform.PLATFORM_ID = platform.ID')
+          .andWhere('userPlatform.STATUS = 1');
+      }, 'usersCount');
+
     if (search) {
-      qb.andWhere('platform.code ILIKE :search', { search: `%${search}%` })
-        .orWhere('platform.name ILIKE :search', { search: `%${search}%` });
+      qb.andWhere(
+        '(UPPER(platform.code) LIKE UPPER(:search) OR UPPER(platform.name) LIKE UPPER(:search))',
+        {
+          search: `%${search}%`,
+        },
+      );
     }
+
     if (status !== undefined && status !== null) {
       qb.andWhere('platform.status = :status', { status });
     }
 
-    // Aplica paginação
     qb.skip((page - 1) * limit);
     qb.take(limit);
-    const [data, total] = await qb.getManyAndCount();
+
+    const { entities, raw } = await qb.getRawAndEntities();
+
+    const total = await qb.getCount();
+
+    const data = entities.map((platform, index) => ({
+      ...platform,
+      usersCount: Number(raw[index].usersCount),
+    }));
+
     return {
       data,
       meta: {
@@ -41,9 +62,8 @@ export class PlatformRepository {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
-
 
   findById(id: number): Promise<Platform | null> {
     return this.repository.findOne({ where: { id } });

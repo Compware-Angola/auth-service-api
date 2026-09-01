@@ -22,8 +22,11 @@ export class IdentityRepository {
       limit = 10,
       search,
       status,
+      platformCode,
     } = query;
-    const queryBuilder = this.repository.createQueryBuilder('identity');
+    const queryBuilder = this.repository.createQueryBuilder('identity')
+      .leftJoinAndSelect('identity.userPlatforms', 'userPlatform')
+      .leftJoinAndSelect('userPlatform.platform', 'platform');
 
     if (search) {
       queryBuilder.andWhere('identity.name ILIKE :name', { name: `%${search}%` })
@@ -33,6 +36,9 @@ export class IdentityRepository {
     }
     if (status) {
       queryBuilder.andWhere('identity.status = :status', { status });
+    }
+    if (platformCode) {
+      queryBuilder.andWhere('platform.code = :platformCode', { platformCode });
     }
 
 
