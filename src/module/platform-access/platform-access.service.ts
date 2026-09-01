@@ -13,7 +13,7 @@ export class PlatformAccessService {
   constructor(
     private readonly platformRepository: PlatformRepository,
     private readonly userPlatformRepository: UserPlatformRepository,
-  ) {}
+  ) { }
 
   async grantAccess(dto: CreatePlatformAccessDto): Promise<UserPlatform> {
     const platform = await this.platformRepository.findByCode(
@@ -38,6 +38,7 @@ export class PlatformAccessService {
     return this.userPlatformRepository.create({
       userId: dto.userId,
       platformId: platform.id,
+      platformUserKey: dto.platformUserKey,
       status: 1,
     });
   }

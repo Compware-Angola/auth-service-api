@@ -4,8 +4,8 @@ import { IdentityModule } from '../identity/identity.module';
 import { PlatformAccessModule } from '../platform-access/platform-access.module';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { RefreshTokenRepository } from './repositories/refresh-token.repository';
-import { IdentityAuthService } from './identity-auth.service';
-import { IdentityAuthController } from './identity-auth.controller';
+import { IdentityAuthService } from './global-auth.service';
+import { IdentityAuthController } from './global-auth.controller';
 
 @Module({
   imports: [
@@ -16,4 +16,4 @@ import { IdentityAuthController } from './identity-auth.controller';
   controllers: [IdentityAuthController],
   providers: [IdentityAuthService, RefreshTokenRepository],
 })
-export class IdentityAuthModule {}
+export class IdentityAuthModule { }

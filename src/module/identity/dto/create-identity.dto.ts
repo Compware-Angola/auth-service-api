@@ -1,22 +1,36 @@
+
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsArray,
   IsEmail,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
-
-export class CreateIdentityDto {
+class PlatformAccessDto {
   @ApiProperty({
-    example: 'manasses.gomes',
-    description: 'Username único da identidade',
+    example: 'GA',
+    description: 'Código da plataforma',
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(100)
-  username: string;
+  @MaxLength(50)
+  platformCode: string;
+  @ApiProperty({
+    example: '1',
+    description: 'Chave da plataforma',
+  })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(50)
+  platformUserKey: string;
+}
+export class CreateIdentityDto {
+
 
   @ApiProperty({
     example: 'manasses.gomes@uma.ao',
@@ -28,31 +42,46 @@ export class CreateIdentityDto {
   email: string;
 
   @ApiProperty({
-    example: 'Manasses Gomes',
-    description: 'Nome completo do utilizador',
+    example: 'Manasses',
+    description: 'Primeiro nome do utilizador',
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(200)
-  name: string;
-
+  @MaxLength(100)
+  firstName: string;
+  @ApiProperty({
+    example: 'Gomes',
+    description: 'Último nome do utilizador',
+  })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(100)
+  lastName: string;
+  @ApiProperty({
+    example: '+244923000000',
+    description: 'Número de telefone do utilizador',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phone?: string;
   @ApiProperty({
     example: '004521547LA042',
     description: 'Número do Bilhete de Identidade (único)',
   })
   @IsNotEmpty()
   @IsString()
-  @MaxLength(150)
+  @MaxLength(50)
   bi: string;
-
   @ApiProperty({
     example: 'https://cdn.uma.ao/avatars/default.png',
-    description: 'URL do avatar. Se omitido, é usado um avatar por omissão.',
+    description: 'URL ou caminho do avatar. Se omitido, será usado o avatar por omissão.',
     required: false,
   })
   @IsOptional()
   @IsString()
-  @MaxLength(150)
+  @MaxLength(255)
   avatar?: string;
 
   @ApiProperty({
@@ -63,4 +92,24 @@ export class CreateIdentityDto {
   @IsString()
   @MinLength(6)
   password: string;
+  @ApiProperty({
+    example: [
+      {
+        platformCode: 'GA',
+        platformUserKey: '1',
+
+      },
+      {
+        platformCode: 'GP',
+        platformUserKey: '2',
+      },
+    ],
+    description: 'Lista de plataformas',
+  })
+  @IsNotEmpty()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PlatformAccessDto)
+  platforms: PlatformAccessDto[];
 }
+

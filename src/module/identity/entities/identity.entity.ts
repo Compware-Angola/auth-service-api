@@ -77,10 +77,8 @@ export class Identity {
   avatar: string;
 
   /**
-   * select:false
-   *
-   * A password nunca é retornada nos finds normais.
-   * Deve ser selecionada explicitamente apenas durante o login.
+   * Password armazenada como hash.
+   * Não é retornada nos SELECTs normais.
    */
   @Column({
     name: 'PASSWORD_HASH',
@@ -89,20 +87,6 @@ export class Identity {
     select: false,
   })
   passwordHash: string;
-
-  /**
-   * USER
-   * ADMIN
-   * SERVICE
-   * SYSTEM
-   */
-  @Column({
-    name: 'USER_TYPE',
-    type: 'varchar2',
-    length: 30,
-    default: "'USER'",
-  })
-  userType: string;
 
   /**
    * 1 = Active
@@ -116,6 +100,10 @@ export class Identity {
   })
   status: number;
 
+  /**
+   * 1 = Verified
+   * 0 = Not verified
+   */
   @Column({
     name: 'EMAIL_VERIFIED',
     type: 'number',
@@ -124,6 +112,10 @@ export class Identity {
   })
   emailVerified: number;
 
+  /**
+   * 1 = Verified
+   * 0 = Not verified
+   */
   @Column({
     name: 'PHONE_VERIFIED',
     type: 'number',

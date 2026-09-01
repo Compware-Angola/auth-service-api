@@ -18,6 +18,6 @@ import { PlatformAccessController } from './platform-access.controller';
     PlatformService,
     PlatformAccessService,
   ],
-  exports: [PlatformService, PlatformAccessService],
+  exports: [PlatformService, PlatformAccessService,],
 })
-export class PlatformAccessModule {}
+export class PlatformAccessModule { }

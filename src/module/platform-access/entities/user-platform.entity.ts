@@ -25,6 +25,9 @@ export class UserPlatform {
   @Index()
   @Column({ name: 'PLATFORM_ID', type: 'int' })
   platformId: number;
+  @Index()
+  @Column({ name: 'PLATFORM_USER_KEY', type: 'varchar2', nullable: true })
+  platformUserKey: string | null;
 
   @Column({ name: 'STATUS', type: 'int', default: 1 })
   status: number;

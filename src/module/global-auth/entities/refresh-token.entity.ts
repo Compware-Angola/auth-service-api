@@ -7,7 +7,7 @@ import {
   Index,
 } from 'typeorm';
 
-@Entity({ name: 'GLOBAL_TB_REFRESH_TOKEN' })
+@Entity({ name: 'TB_GLOBAL_REFRESH_TOKEN' })
 export class RefreshToken {
   @PrimaryGeneratedColumn({ name: 'ID', type: 'int' })
   id: number;

@@ -4,15 +4,15 @@ import { HashService } from './app.service';
 import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './jwt.constants';
 import { HashController } from './app.controller';
-import { AuthModule } from './module/auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { StudetsModule } from './module/users/users.module';
-import { UserSignInService } from './module/auth/users.signIn.service';
 import { BullConfigModule } from './module/shared/bull/bull.module';
-import { IdentityModule } from './module/identity/identity.module';
-import { PlatformAccessModule } from './module/platform-access/platform-access.module';
-import { IdentityAuthModule } from './module/global-auth/identity-auth.module';
+import { databaseOptionsFactory } from './common/config/database.factory';
+import { mailerOptionsFactory } from './common/config/mailer.factory';
+import { AuthModule } from './module/auth/auth.module';
+import { UserSignInService } from './module/auth/users.signIn.service';
+import { IdentityAuthModule } from './module/global-auth/global-auth.module';
 
 @Module({
   imports: [
@@ -46,50 +46,20 @@ import { IdentityAuthModule } from './module/global-auth/identity-auth.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => {
-        const isSSL = config.get<string>('DB_SSL') === 'true';
-        return {
-          type: 'oracle' as const,
-          host: config.get<string>('DB_HOST'),
-          port: config.get<number>('DB_PORT', 1521),
-          username: config.get<string>('DB_USERNAME'),
-          password: config.get<string>('DB_PASSWORD'),
-          sid: config.get<string>('DB_SID'),
-          entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: false,
-          logging: ['query', 'error'],
-          extra: {
-            disableInsertDefaultValues: true,
-            ...(isSSL ? { ssl: { rejectUnauthorized: true } } : {}),
-          },
-        };
-      },
+      useFactory: (config: ConfigService) =>
+        databaseOptionsFactory(config, __dirname + '/**/*.entity{.ts,.js}'),
     }),
     // Configuração do Mailer (SMTP)
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        transport: {
-          host: config.get<string>('MAIL_HOST'),
-          port: config.get<number>('MAIL_PORT'),
-          secure: config.get<string>('MAIL_SECURE') === 'true',
-          auth: {
-            user: config.get<string>('MAIL_USER'),
-            pass: config.get<string>('MAIL_PASS'),
-          },
-        },
-        defaults: {
-          from: `"Equipa de Suporte" <${config.get<string>('MAIL_USER')}>`,
-        },
-      }),
+      useFactory: mailerOptionsFactory,
     }),
     AuthModule,
     StudetsModule,
     BullConfigModule,
-    IdentityModule,
-    PlatformAccessModule,
-    IdentityAuthModule,
+    IdentityAuthModule
+
   ],
   controllers: [HashController],
   providers: [

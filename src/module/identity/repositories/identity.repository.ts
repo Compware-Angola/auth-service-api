@@ -8,7 +8,7 @@ export class IdentityRepository {
   constructor(
     @InjectRepository(Identity)
     private readonly repository: Repository<Identity>,
-  ) {}
+  ) { }
 
   create(data: Partial<Identity>): Promise<Identity> {
     const entity = this.repository.create(data);
@@ -42,7 +42,9 @@ export class IdentityRepository {
   findForLogin(identifier: string): Promise<Identity | null> {
     return this.repository
       .createQueryBuilder('identity')
-      .addSelect('identity.password')
+      .leftJoinAndSelect('identity.userPlatforms', 'userPlatform')
+      .leftJoinAndSelect('userPlatform.platform', 'platform')
+      .addSelect('identity.passwordHash')
       .where('identity.username = :identifier', { identifier })
       .orWhere('identity.email = :identifier', { identifier })
       .getOne();

@@ -1,8 +1,9 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { IdentityAuthService } from './identity-auth.service';
+import { IdentityAuthService } from './global-auth.service';
 import { IdentityLoginDto } from './dto/identity-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 
 /**
  * Rotas do NOVO modelo de auth (Identity + Platform Access).
@@ -10,12 +11,12 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
  * funcionar exactamente como está, para os projectos que ainda dependem
  * da estrutura antiga (GA, PORTAL, PEOPLE_MANAGEMENT).
  */
-@ApiTags('AUTH-V2')
-@Controller('auth/v2')
+@ApiTags('GLOBAL-AUTH')
+@Controller('global/auth')
 export class IdentityAuthController {
   constructor(private readonly identityAuthService: IdentityAuthService) { }
 
-  @Post('login')
+  @Post('sign-in')
   @ApiOperation({
     summary:
       'Login pelo novo modelo de identidade central (TB_GLOBAL_USERS_IDENTITY + Platform Access)',
@@ -51,5 +52,17 @@ export class IdentityAuthController {
   @ApiResponse({ status: 200, description: 'Sessão terminada com sucesso.' })
   logout(@Body() dto: RefreshTokenDto) {
     return this.identityAuthService.logout(dto);
+  }
+
+  @Get("current-user")
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Obtém o usuário autenticado.',
+  })
+  @ApiResponse({ status: 200, description: 'Usuário obtido com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Usuário não autenticado.' })
+  getCurrentUser(@Req() req: any) {
+    const user = req.user;
+    return user;
   }
 }
