@@ -12,6 +12,7 @@ import { UpdateIdentityDto } from './dto/update-identity.dto';
 import { Identity } from './entities/identity.entity';
 import { PlatformAccessService } from '../platform-access/platform-access.service';
 import { CreatePlatformAccessDto } from '../platform-access/dto/create-platform-access.dto';
+import { FindAllIdentitiesDto } from './dto/find-all.dto';
 interface PlatformAccessResult {
   platformCode: string;
   status: 'granted' | 'failed';
@@ -123,11 +124,11 @@ export class IdentityService {
 
 
 
-  findAll(): Promise<Identity[]> {
-    return this.identityRepository.findAll();
+  async findAll(query: FindAllIdentitiesDto) {
+    return this.identityRepository.findAll(query);
   }
 
-  async findById(id: number): Promise<Identity> {
+  async findById(id: number) {
     const identity = await this.identityRepository.findById(id);
     if (!identity) {
       throw new NotFoundException(`Identidade ${id} não encontrada.`);

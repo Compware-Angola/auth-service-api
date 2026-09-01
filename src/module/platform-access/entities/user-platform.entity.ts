@@ -6,12 +6,14 @@ import {
   UpdateDateColumn,
   Unique,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Identity } from '../../identity/entities/identity.entity';
+import { Platform } from './platform.entity';
 
-/**
- * userId referencia TB_GLOBAL_USERS_IDENTITY.ID a nível de base de dados (ver migrations/001_create_identity_and_platform_access.sql),
- * sem relação TypeORM directa, para manter este módulo independente do IdentityModule.
- */
+
+
 @Entity({ name: 'TB_GLOBAL_USER_PLATFORM' })
 @Unique('UQ_USER_PLATFORM', ['userId', 'platformId'])
 export class UserPlatform {
@@ -37,4 +39,12 @@ export class UserPlatform {
 
   @UpdateDateColumn({ name: 'UPDATED_AT', type: 'timestamp' })
   updatedAt: Date;
+
+  @ManyToOne(() => Identity, (identity) => identity.userPlatforms)
+  @JoinColumn({ name: 'USER_ID' })
+  identity: Identity;
+
+  @ManyToOne(() => Platform, { eager: false })
+  @JoinColumn({ name: 'PLATFORM_ID' })
+  platform: Platform;
 }

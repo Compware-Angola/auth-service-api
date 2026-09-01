@@ -4,7 +4,9 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { UserPlatform } from '../../platform-access/entities/user-platform.entity';
 
 @Entity({ name: 'TB_GLOBAL_USERS_IDENTITY' })
 export class Identity {
@@ -163,4 +165,7 @@ export class Identity {
     type: 'timestamp',
   })
   updatedAt: Date;
+
+  @OneToMany(() => UserPlatform, (userPlatform) => userPlatform.identity)
+  userPlatforms: UserPlatform[];
 }

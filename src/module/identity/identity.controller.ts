@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -16,6 +17,7 @@ import {
 import { CreateIdentityResult, IdentityService } from './identity.service';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
+import { FindAllIdentitiesDto } from './dto/find-all.dto';
 
 @ApiTags('IDENTITY')
 @Controller('identity')
@@ -32,8 +34,8 @@ export class IdentityController {
 
   @Get()
   @ApiOperation({ summary: 'Lista todas as identidades' })
-  findAll() {
-    return this.identityService.findAll();
+  findAll(@Query() query: FindAllIdentitiesDto) {
+    return this.identityService.findAll(query);
   }
 
   @Get('username/:username')
