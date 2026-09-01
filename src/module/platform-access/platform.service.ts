@@ -10,6 +10,7 @@ import { CreatePlatformDto } from './dto/create-platform.dto';
 import { UpdatePlatformDto } from './dto/update-platform.dto';
 import { Platform } from './entities/platform.entity';
 import { GLOBAL_PLATFORMS } from './config/platforms';
+import { FindAllPlatformsDto } from './dto/find-all.dto';
 
 
 @Injectable()
@@ -69,8 +70,8 @@ export class PlatformService {
     });
   }
 
-  findAll(): Promise<Platform[]> {
-    return this.platformRepository.findAll();
+  async findAll(queryDto: FindAllPlatformsDto) {
+    return this.platformRepository.findAll(queryDto);
   }
 
   async findById(id: number): Promise<Platform> {
