@@ -10,53 +10,125 @@ import { IdentityRepository } from './repositories/identity.repository';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
 import { Identity } from './entities/identity.entity';
+import { PlatformAccessService } from '../platform-access/platform-access.service';
+import { CreatePlatformAccessDto } from '../platform-access/dto/create-platform-access.dto';
+import { FindAllIdentitiesDto } from './dto/find-all.dto';
+interface PlatformAccessResult {
+  platformCode: string;
+  status: 'granted' | 'failed';
+  reason?: string;
+}
 
+export interface CreateIdentityResult {
+  identity: Identity;
+  platformsSummary: PlatformAccessResult[];
+}
 @Injectable()
 export class IdentityService {
   constructor(
     private readonly identityRepository: IdentityRepository,
     private readonly hashService: HashService,
+    private readonly platformAccessService: PlatformAccessService
   ) { }
 
-  async create(dto: CreateIdentityDto): Promise<Identity> {
-    const [byUsername, byEmail, byBi] = await Promise.all([
-      this.identityRepository.findByUsername(dto.username),
-      this.identityRepository.findByEmail(dto.email),
-      this.identityRepository.findByBi(dto.bi),
+  private async generateUniqueUsername(
+    firstName: string,
+    lastName: string,
+  ): Promise<string> {
+    const first = firstName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '.');
+
+    const last = lastName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '.');
+
+    const baseUsername = `${first}.${last}`;
+
+    let username = baseUsername;
+    let counter = 1;
+
+    while (await this.identityRepository.findByUsername(username)) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    return username;
+  }
+
+  async create(dto: CreateIdentityDto): Promise<CreateIdentityResult> {
+    const { platforms, ...rest } = dto;
+    const [byEmail, byBi] = await Promise.all([
+      this.identityRepository.findByEmail(rest.email),
+      this.identityRepository.findByBi(rest.bi),
     ]);
 
-    if (byUsername) {
-      throw new ConflictException(
-        'Já existe uma identidade com este username.',
-      );
-    }
     if (byEmail) {
       throw new ConflictException('Já existe uma identidade com este email.');
     }
+
     if (byBi) {
       throw new ConflictException('Já existe uma identidade com este BI.');
     }
 
     const hashedPassword = await this.hashService.criarHash(dto.password);
+    const name = `${dto.firstName.trim()} ${dto.lastName.trim()}`;
+    const username = await this.generateUniqueUsername(dto.firstName, dto.lastName);
 
     const identity = await this.identityRepository.create({
-      username: dto.username,
+      username,
       email: dto.email,
-      name: dto.name,
+      name,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone ?? null,
       bi: dto.bi,
       avatar: dto.avatar ?? 'default-avatar.png',
       passwordHash: hashedPassword,
       status: 1,
     });
 
-    return this.sanitize(identity);
+    const results = await Promise.allSettled(
+      platforms.map((platform) =>
+        this.platformAccessService.grantAccess({
+          platformCode: platform.platformCode,
+          userId: identity.id,
+          platformUserKey: platform.platformUserKey,
+        }),
+      ),
+    );
+
+    const platformsSummary: PlatformAccessResult[] = results.map((result, i) => {
+      const platformCode = platforms[i].platformCode;
+      if (result.status === 'fulfilled') {
+        return { platformCode, status: 'granted' };
+      }
+      const reason =
+        result.reason instanceof Error
+          ? result.reason.message
+          : 'Erro desconhecido ao conceder acesso.';
+      return { platformCode, status: 'failed', reason };
+    });
+
+    return {
+      identity: this.sanitize(identity),
+      platformsSummary,
+    };
   }
 
-  findAll(): Promise<Identity[]> {
-    return this.identityRepository.findAll();
+
+
+  async findAll(query: FindAllIdentitiesDto) {
+    return this.identityRepository.findAll(query);
   }
 
-  async findById(id: number): Promise<Identity> {
+  async findById(id: number) {
     const identity = await this.identityRepository.findById(id);
     if (!identity) {
       throw new NotFoundException(`Identidade ${id} não encontrada.`);
@@ -92,16 +164,7 @@ export class IdentityService {
   async update(id: number, dto: UpdateIdentityDto): Promise<Identity> {
     await this.findById(id);
 
-    if (dto.username) {
-      const existing = await this.identityRepository.findByUsername(
-        dto.username,
-      );
-      if (existing && existing.id !== id) {
-        throw new ConflictException(
-          'Já existe uma identidade com este username.',
-        );
-      }
-    }
+
 
     if (dto.email) {
       const existing = await this.identityRepository.findByEmail(dto.email);
@@ -143,7 +206,7 @@ export class IdentityService {
   ): Promise<Identity> {
     const identity = await this.identityRepository.findForLogin(identifier);
     if (!identity) {
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw new UnauthorizedException('Acesso Não Autorizado.');
     }
 
     if (identity.status !== 1) {
@@ -157,7 +220,7 @@ export class IdentityService {
       identity.passwordHash,
     );
     if (!matches) {
-      throw new UnauthorizedException('Credenciais inválidas.');
+      throw new UnauthorizedException('Acesso Não Autorizado.');
     }
 
     return identity;

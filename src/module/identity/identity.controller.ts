@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -13,27 +14,28 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { IdentityService } from './identity.service';
+import { CreateIdentityResult, IdentityService } from './identity.service';
 import { CreateIdentityDto } from './dto/create-identity.dto';
 import { UpdateIdentityDto } from './dto/update-identity.dto';
+import { FindAllIdentitiesDto } from './dto/find-all.dto';
 
 @ApiTags('IDENTITY')
 @Controller('identity')
 export class IdentityController {
-  constructor(private readonly identityService: IdentityService) {}
+  constructor(private readonly identityService: IdentityService) { }
 
   @Post()
   @ApiOperation({ summary: 'Cria uma nova identidade' })
   @ApiBody({ type: CreateIdentityDto })
   @ApiResponse({ status: 201, description: 'Identidade criada com sucesso.' })
-  create(@Body() dto: CreateIdentityDto) {
+  create(@Body() dto: CreateIdentityDto): Promise<CreateIdentityResult> {
     return this.identityService.create(dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Lista todas as identidades' })
-  findAll() {
-    return this.identityService.findAll();
+  findAll(@Query() query: FindAllIdentitiesDto) {
+    return this.identityService.findAll(query);
   }
 
   @Get('username/:username')

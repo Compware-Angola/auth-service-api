@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -17,11 +18,12 @@ import {
 import { PlatformService } from './platform.service';
 import { CreatePlatformDto } from './dto/create-platform.dto';
 import { UpdatePlatformDto } from './dto/update-platform.dto';
+import { FindAllPlatformsDto } from './dto/find-all.dto';
 
 @ApiTags('PLATFORMS')
 @Controller('platforms')
 export class PlatformController {
-  constructor(private readonly platformService: PlatformService) {}
+  constructor(private readonly platformService: PlatformService) { }
 
   @Post()
   @ApiOperation({ summary: 'Cria uma nova plataforma' })
@@ -33,8 +35,8 @@ export class PlatformController {
 
   @Get()
   @ApiOperation({ summary: 'Lista todas as plataformas' })
-  findAll() {
-    return this.platformService.findAll();
+  findAll(@Query() queryDto: FindAllPlatformsDto) {
+    return this.platformService.findAll(queryDto);
   }
 
   @Get(':id')

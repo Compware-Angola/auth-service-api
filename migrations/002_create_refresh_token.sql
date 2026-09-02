@@ -1,5 +1,5 @@
 -- =====================================================================
--- Migration: Refresh Token (auth-v2 / Identity)
+-- Migration: Refresh Token (Global Auth)
 -- Base de dados: Oracle
 --
 -- Depende de TB_GLOBAL_USERS_IDENTITY (ver 001_create_identity_and_platform_access.sql).

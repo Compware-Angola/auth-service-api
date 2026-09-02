@@ -19,7 +19,7 @@ import { HashService } from 'src/app.service';
 import { JwtService } from '@nestjs/jwt';
 import { toLowerCaseKeys } from 'src/util/toLowerCaseKeys';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
-import { MailerService } from '@nestjs-modules/mailer';
+
 import { ResetPasswordDto } from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
 import { GetCurrentPlataformDto } from './dto/get-plataform-user';
@@ -30,6 +30,8 @@ import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { MailService } from '../shared/mailer/mail.service';
+import { QueueName } from 'src/common/constants/queue.constant';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +41,7 @@ export class AuthService {
     private readonly dataSource: DataSource,
     private hashService: HashService,
     private readonly jwtService: JwtService,
-    private readonly mailerService: MailerService,
+    private readonly mailerService: MailService,
     private readonly userSignInService: UserSignInService,
     private readonly anoLectivoUtil: AnoLectivoUtil,
   ) { }
@@ -1581,7 +1583,7 @@ ORDER BY p.Codigo DESC
     htmlContent: string,
     from?: string,
   ) {
-    await this.mailerService.sendMail({
+    await this.mailerService.send({
       to: to,
       // from: from ? undefined : process.env.MAIL_USER,
       // cc: from ? undefined : process.env.MAIL_USER_CC,
@@ -1594,7 +1596,7 @@ ORDER BY p.Codigo DESC
     codigoUtilizador: number,
   ): Promise<{ message: string; taskId: string | undefined }> {
     const job = await this.operator_boxQueue.add(
-      'processOperatorBox',
+      QueueName.OPERATOR_BOX,
       {
         codigoUtilizador,
       },

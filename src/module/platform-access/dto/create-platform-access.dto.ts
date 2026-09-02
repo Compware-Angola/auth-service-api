@@ -11,4 +11,15 @@ export class CreatePlatformAccessDto {
   @IsNotEmpty()
   @IsString()
   platformCode: string;
+
+
+  @ApiProperty({
+    example: 1,
+    description: 'Chave da plataforma (exemplo: ID do cliente no sistema externo)',
+    required: false,
+  })
+  @IsString()
+
+
+  platformUserKey: string;
 }
