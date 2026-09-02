@@ -40,6 +40,52 @@ export class PeopleManagementAuthService {
         return user
     }
 
+    async findByEmail(email: string) {
+        const value = email.trim().toLowerCase()
+
+        const result =
+            await this.dataSource.query(
+                `
+        SELECT
+          U.CODIGO AS "id",
+          U.CODIGO_PESSOA AS "personId",
+          U.EMAIL AS "email",
+          U.USERNAME AS "username",
+
+          P.NOME AS "fullName"
+
+        FROM GP_USER_COLABORADOR U
+
+        INNER JOIN GP_PESSOA P
+          ON P.CODIGO = U.CODIGO_PESSOA
+
+        WHERE LOWER(U.EMAIL) = :email
+
+        FETCH FIRST 1 ROW ONLY
+      `,
+                [value],
+            )
+
+        return result[0] ?? null
+    }
+
+    async updatePassword(
+        userId: number,
+        newPassword: string,
+    ): Promise<void> {
+        const hashedPassword =
+            await this.hashService.criarHash(newPassword)
+
+        await this.dataSource.query(
+            `
+        UPDATE GP_USER_COLABORADOR
+        SET SENHA = :hashedPassword
+        WHERE CODIGO = :userId
+      `,
+            [hashedPassword, userId],
+        )
+    }
+
     private async findUser(
         identifier: string,
     ) {

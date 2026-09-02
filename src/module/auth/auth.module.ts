@@ -12,6 +12,7 @@ import { MailModule } from '../shared/mailer/mail.module';
 import { AuthService as AuthService2 } from './services/auth.service'
 import { AuthTokenService } from './services/auth-token.service';
 import { PeopleManagementAuthService } from './strategies/people-management-auth.service';
+import { AcademicAuthService } from './strategies/academic-auth.service';
 
 
 @Module({
@@ -25,6 +26,6 @@ import { PeopleManagementAuthService } from './strategies/people-management-auth
     MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, HashService, UserSignInService, AnoLectivoUtil, AuthService2, AuthTokenService, PeopleManagementAuthService],
+  providers: [AuthService, HashService, UserSignInService, AnoLectivoUtil, AuthService2, AuthTokenService, PeopleManagementAuthService, AcademicAuthService],
 })
 export class AuthModule { }

@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsEnum,
 } from 'class-validator';
+import { OmitType } from '@nestjs/mapped-types';
 import { AuthPlatform } from './signIn.dto';
 
 export class ResetPasswordDto {
@@ -42,3 +43,8 @@ export class ResetPasswordDto {
   @IsEnum(AuthPlatform)
   platform!: AuthPlatform;
 }
+
+export class ResetPasswordDtoWithOutPlatform extends OmitType(
+  ResetPasswordDto,
+  ['platform'] as const,
+) { }
