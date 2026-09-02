@@ -26,6 +26,7 @@ import {
   LogoutDto,
   MakloggedOutDto,
   SignInDto,
+  SignInDtoWithOutPlatform,
 } from './dto/signIn.dto';
 import { CheckEmailExistsDto } from './dto/check-email-exists';
 import { ResetPasswordDto } from './dto/reset-password';
@@ -35,12 +36,14 @@ import { AccessLogHelper } from 'src/common/helpers/access-log.helper';
 import { HttpService } from '@nestjs/axios';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
+import { AuthService as AuthService2 } from './services/auth.service'
 
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly auth: AuthService2,
     private httpService: HttpService,
   ) { }
 
@@ -198,5 +201,16 @@ export class AuthController {
   @ApiBody({ type: SendRenewDataDto })
   async sendRenewData(@Body() sendRenewDataDto: SendRenewDataDto) {
     return this.authService.sendRenewData(sendRenewDataDto);
+  }
+
+  @Post('login/people-management-portal')
+  @ApiOperation({ summary: 'Login do utilizador' })
+  @ApiResponse({ status: 200, description: 'Login efectuado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
+  @ApiBody({ type: SignInDto })
+  async signInPeopleManagementPortal(@Body() signInDto: SignInDtoWithOutPlatform, @Req() req: any) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const login = await this.auth.signIn({ ...signInDto, platform: AuthPlatform.PEOPLE_MANAGEMENT_PORTAL });
+    return login;
   }
 }

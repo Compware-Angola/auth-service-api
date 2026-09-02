@@ -9,6 +9,9 @@ import { AcademicYear } from 'src/util/entities/academic.year.entity';
 import { AnoLectivoUtil } from 'src/util/current-academic-year';
 import { BullConfigModule } from '../shared/bull/bull.module';
 import { MailModule } from '../shared/mailer/mail.module';
+import { AuthService as AuthService2 } from './services/auth.service'
+import { AuthTokenService } from './services/auth-token.service';
+import { PeopleManagementAuthService } from './strategies/people-management-auth.service';
 
 
 @Module({
@@ -22,6 +25,6 @@ import { MailModule } from '../shared/mailer/mail.module';
     MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, HashService, UserSignInService, AnoLectivoUtil],
+  providers: [AuthService, HashService, UserSignInService, AnoLectivoUtil, AuthService2, AuthTokenService, PeopleManagementAuthService],
 })
 export class AuthModule { }

@@ -79,7 +79,7 @@ export class AuthService {
 
         break;
 
-      case AuthPlatform.PEOPLE_MANAGEMENT:
+      case AuthPlatform.PEOPLE_MANAGEMENT_PORTAL:
         user = await this.findUserByEmailPeopleManagement(username);
 
         if (!user) break;
@@ -103,13 +103,13 @@ export class AuthService {
       );
     }
 
-    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.estado !== 1) {
+    if (platform === AuthPlatform.PEOPLE_MANAGEMENT_PORTAL && user.estado !== 1) {
       throw new BadRequestException(
         'Usuário inativo, contate o administrador do sistema.',
       );
     }
 
-    if (platform === AuthPlatform.PEOPLE_MANAGEMENT && user.precisa_mudar_senha === 1) {
+    if (platform === AuthPlatform.PEOPLE_MANAGEMENT_PORTAL && user.precisa_mudar_senha === 1) {
       throw new ForbiddenException(
         'Atualize sua senha para ter acesso ao sistema',
       );
@@ -141,7 +141,9 @@ export class AuthService {
         codigoPreinscricao: user.codigo_preinscricao,
         platform,
       };
-    } else if (platform === AuthPlatform.PEOPLE_MANAGEMENT) {
+
+
+    } else if (platform === AuthPlatform.PEOPLE_MANAGEMENT_PORTAL) {
       permissions = await this.getUserPermissionsPeopleManagement(user.codigo);
       payload = {
         username: user.email,
@@ -170,7 +172,7 @@ export class AuthService {
       platform,
       user: { ...user, password: undefined },
       ...((platform === AuthPlatform.GA ||
-        platform === AuthPlatform.PEOPLE_MANAGEMENT) && {
+        platform === AuthPlatform.PEOPLE_MANAGEMENT_PORTAL) && {
         roles,
         groups,
         permissions,
