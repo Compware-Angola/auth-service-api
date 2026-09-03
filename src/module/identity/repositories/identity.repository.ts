@@ -84,7 +84,7 @@ export class IdentityRepository {
    * Único ponto que lê a PASSWORD (select:false na entidade). Usado
    * exclusivamente pelo fluxo de login para validar credenciais.
    */
-  findForLogin(identifier: string): Promise<Identity | null> {
+  findForLogin(identifier: string, platformCode: string): Promise<Identity | null> {
     return this.repository
       .createQueryBuilder('identity')
       .leftJoinAndSelect('identity.userPlatforms', 'userPlatform')
@@ -92,6 +92,7 @@ export class IdentityRepository {
       .addSelect('identity.passwordHash')
       .where('identity.username = :identifier', { identifier })
       .orWhere('identity.email = :identifier', { identifier })
+      .andWhere('platform.code = :platformCode', { platformCode })
       .getOne();
   }
 

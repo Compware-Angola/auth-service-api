@@ -29,7 +29,9 @@ export class IdentityAuthService {
     const identity = await this.identityService.validateUserCredentials(
       dto.identifier,
       dto.password,
+      dto.platformCode,
     );
+    console.log(identity, "========================================");
 
     if (dto.platformCode) {
       const hasAccess = await this.platformAccessService.hasAccess(
@@ -49,6 +51,7 @@ export class IdentityAuthService {
       identity.email,
       identity.bi || '',
       dto.platformCode,
+      identity.userPlatforms[0].platformUserKey || '',
     );
 
     return {
@@ -117,9 +120,10 @@ export class IdentityAuthService {
     email: string,
     bi?: string,
     platformCode?: string,
+    platformUserKey?: string,
   ) {
     const access_token = this.jwtService.sign(
-      { sub: identityId, username, email, bi, platform: platformCode },
+      { sub: identityId, username, email, bi, platform: platformCode, platformUserKey },
       { expiresIn: ACCESS_TOKEN_EXPIRES_IN },
     );
 

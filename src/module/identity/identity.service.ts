@@ -203,8 +203,9 @@ export class IdentityService {
   async validateUserCredentials(
     identifier: string,
     password: string,
+    platformCode: string,
   ): Promise<Identity> {
-    const identity = await this.identityRepository.findForLogin(identifier);
+    const identity = await this.identityRepository.findForLogin(identifier, platformCode);
     if (!identity) {
       throw new UnauthorizedException('Acesso Não Autorizado.');
     }
