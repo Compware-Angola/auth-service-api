@@ -7,6 +7,7 @@ import {
   IsString,
   IsOptional,
 } from 'class-validator';
+import { OmitType } from '@nestjs/mapped-types';
 import { AuthPlatform } from './signIn.dto';
 
 export class CheckEmailExistsDto {
@@ -46,3 +47,8 @@ export class CheckEmailExistsDto {
   @IsEnum(AuthPlatform)
   platform!: AuthPlatform;
 }
+
+export class CheckEmailExistsDtoWithOutPlatform extends OmitType(
+  CheckEmailExistsDto,
+  ['platform'] as const,
+) { }

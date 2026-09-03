@@ -26,21 +26,30 @@ import {
   LogoutDto,
   MakloggedOutDto,
   SignInDto,
+  SignInDtoWithOutPlatform,
 } from './dto/signIn.dto';
-import { CheckEmailExistsDto } from './dto/check-email-exists';
-import { ResetPasswordDto } from './dto/reset-password';
+import {
+  CheckEmailExistsDto,
+  CheckEmailExistsDtoWithOutPlatform,
+} from './dto/check-email-exists';
+import {
+  ResetPasswordDto,
+  ResetPasswordDtoWithOutPlatform,
+} from './dto/reset-password';
 import { SendRenewDataDto } from './dto/send-renew-data.dto';
 
 import { AccessLogHelper } from 'src/common/helpers/access-log.helper';
 import { HttpService } from '@nestjs/axios';
 import { UserUpdatePasswordDto } from './dto/user-update-password';
 import { JwtAuthGuard } from './guard/jwt-auth.guard';
+import { AuthService as AuthService2 } from './services/auth.service'
 
 @ApiTags('AUTH')
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
+    private readonly auth: AuthService2,
     private httpService: HttpService,
   ) { }
 
@@ -198,5 +207,105 @@ export class AuthController {
   @ApiBody({ type: SendRenewDataDto })
   async sendRenewData(@Body() sendRenewDataDto: SendRenewDataDto) {
     return this.authService.sendRenewData(sendRenewDataDto);
+  }
+
+  @Post('login/people-management-portal')
+  @ApiOperation({ summary: 'Login do utilizador' })
+  @ApiResponse({ status: 200, description: 'Login efectuado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
+  @ApiBody({ type: SignInDto })
+  async signInPeopleManagementPortal(@Body() signInDto: SignInDtoWithOutPlatform, @Req() req: any) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const login = await this.auth.signIn({ ...signInDto, platform: AuthPlatform.PEOPLE_MANAGEMENT_PORTAL });
+    return login;
+  }
+
+  @Post('login/portal')
+  @ApiOperation({ summary: 'Login do utilizador' })
+  @ApiResponse({ status: 200, description: 'Login efectuado com sucesso.' })
+  @ApiResponse({ status: 401, description: 'Credenciais inválidas.' })
+  @ApiBody({ type: SignInDto })
+  async signInPortal(@Body() signInDto: SignInDtoWithOutPlatform, @Req() req: any) {
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const login = await this.auth.signIn({ ...signInDto, platform: AuthPlatform.PORTAL });
+    return login;
+  }
+
+  @Post('logout/portal')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Logout do utilizador (PORTAL)' })
+  @ApiResponse({ status: 200, description: 'Logout efectuado com sucesso.' })
+  async logoutPortal() {
+    return this.auth.logout(AuthPlatform.PORTAL);
+  }
+
+  @Post('logout/people-management-portal')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Logout do utilizador (PEOPLE_MANAGEMENT_PORTAL)' })
+  @ApiResponse({ status: 200, description: 'Logout efectuado com sucesso.' })
+  async logoutPeopleManagementPortal() {
+    return this.auth.logout(AuthPlatform.PEOPLE_MANAGEMENT_PORTAL);
+  }
+
+  @Post('forgot-password/portal')
+  @ApiOperation({ summary: 'Envia e-mail de redefinição de senha (PORTAL)' })
+  @ApiResponse({ status: 200, description: 'E-mail enviado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'E-mail não encontrado.' })
+  @ApiBody({ type: CheckEmailExistsDtoWithOutPlatform })
+  async forgotPasswordPortal(
+    @Body() dto: CheckEmailExistsDtoWithOutPlatform,
+  ) {
+    return this.auth.requestPasswordReset({
+      ...dto,
+      platform: AuthPlatform.PORTAL,
+    });
+  }
+
+  @Post('forgot-password/people-management-portal')
+  @ApiOperation({
+    summary: 'Envia e-mail de redefinição de senha (PEOPLE_MANAGEMENT_PORTAL)',
+  })
+  @ApiResponse({ status: 200, description: 'E-mail enviado com sucesso.' })
+  @ApiResponse({ status: 404, description: 'E-mail não encontrado.' })
+  @ApiBody({ type: CheckEmailExistsDtoWithOutPlatform })
+  async forgotPasswordPeopleManagementPortal(
+    @Body() dto: CheckEmailExistsDtoWithOutPlatform,
+  ) {
+    return this.auth.requestPasswordReset({
+      ...dto,
+      platform: AuthPlatform.PEOPLE_MANAGEMENT_PORTAL,
+    });
+  }
+
+  @Post('reset-password/portal')
+  @ApiOperation({ summary: 'Redefine a senha usando o token (PORTAL)' })
+  @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
+  @ApiBody({ type: ResetPasswordDtoWithOutPlatform })
+  async resetPasswordPortal(
+    @Body() dto: ResetPasswordDtoWithOutPlatform,
+  ) {
+    return this.auth.resetPassword({
+      ...dto,
+      platform: AuthPlatform.PORTAL,
+    });
+  }
+
+  @Post('reset-password/people-management-portal')
+  @ApiOperation({
+    summary: 'Redefine a senha usando o token (PEOPLE_MANAGEMENT_PORTAL)',
+  })
+  @ApiResponse({ status: 200, description: 'Senha redefinida com sucesso.' })
+  @ApiResponse({ status: 400, description: 'Token inválido ou expirado.' })
+  @ApiBody({ type: ResetPasswordDtoWithOutPlatform })
+  async resetPasswordPeopleManagementPortal(
+    @Body() dto: ResetPasswordDtoWithOutPlatform,
+  ) {
+    return this.auth.resetPassword({
+      ...dto,
+      platform: AuthPlatform.PEOPLE_MANAGEMENT_PORTAL,
+    });
   }
 }
