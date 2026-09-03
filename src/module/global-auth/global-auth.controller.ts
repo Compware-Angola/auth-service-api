@@ -63,6 +63,9 @@ export class IdentityAuthController {
   @ApiResponse({ status: 401, description: 'Usuário não autenticado.' })
   getCurrentUser(@Req() req: any) {
     const user = req.user;
-    return user;
+    return {
+      message: 'Current user fetched successfully.',
+      user,
+    };
   }
 }
