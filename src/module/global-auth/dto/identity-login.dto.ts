@@ -19,9 +19,8 @@ export class IdentityLoginDto {
     example: 'INVOICE',
     description:
       'Código da plataforma a validar (opcional). Se informado, o login falha caso a identidade não tenha acesso a essa plataforma.',
-    required: false,
+    required: true,
   })
-  @IsOptional()
   @IsString()
-  platformCode?: string;
+  platformCode: string;
 }

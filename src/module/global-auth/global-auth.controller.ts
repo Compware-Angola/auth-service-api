@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { IdentityAuthService } from './global-auth.service';
 import { IdentityLoginDto } from './dto/identity-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -53,9 +53,9 @@ export class IdentityAuthController {
   logout(@Body() dto: RefreshTokenDto) {
     return this.identityAuthService.logout(dto);
   }
-
   @Get("current-user")
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Obtém o usuário autenticado.',
   })
@@ -63,6 +63,9 @@ export class IdentityAuthController {
   @ApiResponse({ status: 401, description: 'Usuário não autenticado.' })
   getCurrentUser(@Req() req: any) {
     const user = req.user;
-    return user;
+    return {
+      message: 'Current user fetched successfully.',
+      user,
+    };
   }
 }

@@ -29,7 +29,9 @@ export class AnoLectivoUtil {
     try {
       const anoAtivo = await this.anoLectivoRepo.findOne({
         where: { estado: 'Ativo' },
-        select: ['Codigo'],
+        select: {
+          Codigo: true,
+        },
         cache: {
           id: 'ano_letivo_ativo',
           milliseconds: 60_000,
@@ -65,13 +67,13 @@ export class AnoLectivoUtil {
 
     const ano = await this.anoLectivoRepo.findOne({
       where: { Codigo: anoId },
-      select: [
-        'Codigo',
-        'dataInicioPrimeiroSemestre',
-        'dataFimPrimeiroSemestre',
-        'dataInicioSegundoSemestre',
-        'dataFimSegundoSemestre',
-      ],
+      select: {
+        Codigo: true,
+        dataInicioPrimeiroSemestre: true,
+        dataFimPrimeiroSemestre: true,
+        dataInicioSegundoSemestre: true,
+        dataFimSegundoSemestre: true,
+      },
     });
 
     if (!ano) {
@@ -140,15 +142,14 @@ export class AnoLectivoUtil {
 
     const ano = await this.anoLectivoRepo.findOne({
       where: { Codigo: anoId },
-      select: [
-        'Codigo',
-        'dataInicioPrimeiroSemestre',
-        'dataFimPrimeiroSemestre',
-        'dataInicioSegundoSemestre',
-        'dataFimSegundoSemestre',
-      ],
+      select: {
+        Codigo: true,
+        dataInicioPrimeiroSemestre: true,
+        dataFimPrimeiroSemestre: true,
+        dataInicioSegundoSemestre: true,
+        dataFimSegundoSemestre: true,
+      },
     });
-
     if (!ano) {
       throw new Error('Ano lectivo não encontrado');
     }
