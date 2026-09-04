@@ -9,7 +9,7 @@ export class IdentityRepository {
   constructor(
     @InjectRepository(Identity)
     private readonly repository: Repository<Identity>,
-  ) { }
+  ) {}
 
   create(data: Partial<Identity>): Promise<Identity> {
     const entity = this.repository.create(data);
@@ -17,34 +17,43 @@ export class IdentityRepository {
   }
 
   async findAll(query: FindAllIdentitiesDto) {
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      status,
-      platformCode,
-    } = query;
-    const queryBuilder = this.repository.createQueryBuilder('identity')
+    const { page = 1, limit = 10, search, status, platformCode } = query;
+
+    const queryBuilder = this.repository
+      .createQueryBuilder('identity')
       .leftJoinAndSelect('identity.userPlatforms', 'userPlatform')
       .leftJoinAndSelect('userPlatform.platform', 'platform');
 
     if (search) {
-      queryBuilder.andWhere('identity.name ILIKE :name', { name: `%${search}%` })
-        .orWhere('identity.email ILIKE :email', { email: `%${search}%` })
-        .orWhere('identity.phone ILIKE :phone', { phone: `%${search}%` })
-        .orWhere('identity.bi ILIKE :bi', { bi: `%${search}%` });
+      queryBuilder.andWhere(
+        `(
+        UPPER(identity.name) LIKE UPPER(:search)
+        OR UPPER(identity.email) LIKE UPPER(:search)
+        OR UPPER(identity.phone) LIKE UPPER(:search)
+        OR UPPER(identity.bi) LIKE UPPER(:search)
+      )`,
+        {
+          search: `%${search}%`,
+        },
+      );
     }
-    if (status) {
-      queryBuilder.andWhere('identity.status = :status', { status });
+
+    if (status !== undefined) {
+      queryBuilder.andWhere('identity.status = :status', {
+        status,
+      });
     }
+
     if (platformCode) {
-      queryBuilder.andWhere('platform.code = :platformCode', { platformCode });
+      queryBuilder.andWhere('platform.code = :platformCode', {
+        platformCode,
+      });
     }
 
+    queryBuilder.skip((page - 1) * limit).take(limit);
 
-    queryBuilder.skip((page - 1) * limit);
-    queryBuilder.take(limit);
     const [data, total] = await queryBuilder.getManyAndCount();
+
     return {
       data,
       meta: {
@@ -53,12 +62,10 @@ export class IdentityRepository {
         limit,
         totalPages: Math.ceil(total / limit),
       },
-    }
+    };
   }
 
   findById(id: number): Promise<Identity | null> {
-
-
     return this.repository
       .createQueryBuilder('identity')
       .leftJoinAndSelect('identity.userPlatforms', 'userPlatform')
